@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-light: #f8fafc;
+  --color-bg-dark: #0f172a;
+  --color-card-light: #ffffff;
+  --color-card-dark: #1e293b;
+  --color-text-light: #0f172a;
+  --color-text-dark: #f8fafc;
+  --color-primary: #22c55e;
+  --color-primary-focus: #16a34a;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-light dark:bg-bg-dark text-text-light dark:text-text-dark;
+  }
+}
