@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import ChartComponent from '../components/ChartComponent';
 import { HistoricalDataPoint, TFunction, Report } from '../types';
+import { useFarm } from '../contexts/FarmContext';
 import * as api from '../services/apiService';
 
 interface ReportsProps {
-  farmId: number | null;
   t: TFunction;
 }
 
@@ -14,32 +15,51 @@ const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ chi
   </div>
 );
 
-const Reports: React.FC<ReportsProps> = ({ farmId, t }) => {
+const Reports: React.FC<ReportsProps> = ({ t }) => {
+  const { selectedFarmId } = useFarm();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(false);
-  const historicalWaterUsage: HistoricalDataPoint[] = []; // Placeholder
+  const historicalWaterUsage: HistoricalDataPoint[] = [];
 
   useEffect(() => {
-    if (farmId) {
-        setLoading(true);
-        api.getReportsByFarm(farmId).then(data => {
-            setReports(data);
-            setLoading(false);
-        });
-    } else {
-        setReports([]);
-    }
-  }, [farmId]);
+    const timer = setTimeout(() => {
+        if (selectedFarmId) {
+            setLoading(true);
+            api.getReportsByFarm(selectedFarmId)
+            .then((data: any) => {
+                setReports(data as Report[]);
+            })
+            .catch((err: any) => {
+                console.error("Failed to load reports", err);
+                setReports([]);
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+        } else {
+            setReports([]);
+        }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [selectedFarmId]);
 
   const handleGenerateReport = () => {
-    if(!farmId) return;
-    api.generateReport(farmId).then(newReport => {
-        setReports(prev => [newReport, ...prev]);
-    });
+    if(!selectedFarmId) return;
+    
+    api.generateReport(selectedFarmId)
+      .then((newReport: any) => {
+        const formattedReport: Report = {
+            ...newReport,
+            id: String(newReport.id)
+        };
+        setReports(prev => [formattedReport, ...prev]);
+      })
+      .catch((err: any) => console.error("Failed to generate report", err));
   };
 
   const handleExport = (format: 'PDF' | 'CSV') => {
-    alert(`Simulating export of ${reports.length} reports as ${format}...`);
+    alert(`Exporting as ${format} (Simulation)`);
   };
 
   return (
@@ -53,7 +73,7 @@ const Reports: React.FC<ReportsProps> = ({ farmId, t }) => {
           <div className="flex gap-2">
             <button
                 onClick={handleGenerateReport}
-                disabled={!farmId}
+                disabled={!selectedFarmId}
                 className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-focus transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
                 Generate Report
@@ -87,7 +107,7 @@ const Reports: React.FC<ReportsProps> = ({ farmId, t }) => {
                 reports.map((report) => (
                 <tr key={report.id} className="border-b dark:border-slate-700 even:bg-card-light dark:even:bg-card-dark odd:bg-slate-50 dark:odd:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700">
                     <th scope="row" className="px-6 py-4 font-medium text-black dark:text-white whitespace-nowrap">{report.id}</th>
-                    <td className="px-6 py-4">{report.date}</td>
+                    <td className="px-6 py-4">{new Date(report.date).toLocaleDateString()}</td>
                     <td className="px-6 py-4">{report.type}</td>
                     <td className="px-6 py-4">{report.author}</td>
                 </tr>

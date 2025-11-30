@@ -1,225 +1,378 @@
-import { Farm, Zone, Crop, ReadingType, Equipment, ZoneCrop, Alert, Report, ReadingTypeCode, EquipmentStatus, ThresholdType, CropGrowthStage, User } from '../types';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import httpClient from './httpClient';
+import { API_ENDPOINTS } from '../config/api.config';
+import { User, Farm, Zone, Crop, Equipment, Alert, ZoneCrop, ReadingType, SensorReading, EquipmentStatus, CropGrowthStage} from '../types';
 
-// --- SIMULATED BACKEND DATABASE ---
-const DB: {
-    users: User[];
-    farms: Farm[];
-    zones: Zone[];
-    zoneCrops: ZoneCrop[];
-    equipments: Equipment[];
-    alerts: Alert[];
-    reports: Report[];
-    readingTypes: ReadingType[];
-    cropCatalog: Crop[];
-} = {
-    users: [
-        { id: 1, name: 'Layla Abdulsalam', email: 'layla.abdulsalam@smartagri.com', role: 'Farm Owner', avatarUrl: '' }
-    ],
-    farms: [],
-    zones: [],
-    zoneCrops: [],
-    equipments: [],
-    alerts: [],
-    reports: [],
-    readingTypes: [
-        { id: 1, code: ReadingTypeCode.SoilMoisture, displayName: 'Soil Moisture', unit: '%' },
-        { id: 2, code: ReadingTypeCode.SoilPH, displayName: 'Soil pH', unit: '' },
-        { id: 3, code: ReadingTypeCode.Temperature, displayName: 'Temperature', unit: 'C' },
-        { id: 4, code: ReadingTypeCode.AmbientHumidity, displayName: 'Ambient Humidity', unit: '%' },
-    ],
-    cropCatalog: [
-         {
-            id: 1, name: 'Tomato', seasons: [
-                { id: 1, cropId: 1, name: 'Summer', stages: [
-                    { id: 1, cropSeasonId: 1, name: 'Germination', durationDays: 10, order: 1, requirements: [
-                        { id: 1, stageId: 1, readingTypeId: 1, minValue: 55, maxValue: 75, optimalMin: 60, optimalMax: 70}, // Moisture
-                        { id: 2, stageId: 1, readingTypeId: 3, minValue: 18, maxValue: 30, optimalMin: 22, optimalMax: 26}, // Temp
-                    ]},
-                    { id: 2, cropSeasonId: 1, name: 'Vegetative', durationDays: 30, order: 2, requirements: [
-                        { id: 3, stageId: 2, readingTypeId: 1, minValue: 50, maxValue: 70, optimalMin: 55, optimalMax: 65}, // Moisture
-                        { id: 4, stageId: 2, readingTypeId: 3, minValue: 20, maxValue: 32, optimalMin: 24, optimalMax: 28}, // Temp
-                    ]},
-                    { id: 3, cropSeasonId: 1, name: 'Flowering', durationDays: 20, order: 3, requirements: [
-                        { id: 5, stageId: 3, readingTypeId: 1, minValue: 60, maxValue: 80, optimalMin: 65, optimalMax: 75},
-                        { id: 6, stageId: 3, readingTypeId: 3, minValue: 22, maxValue: 34, optimalMin: 25, optimalMax: 30},
-                    ]},
-                     { id: 4, cropSeasonId: 1, name: 'Fruiting', durationDays: 30, order: 4, requirements: [
-                        { id: 7, stageId: 4, readingTypeId: 1, minValue: 65, maxValue: 85, optimalMin: 70, optimalMax: 80},
-                        { id: 8, stageId: 4, readingTypeId: 3, minValue: 24, maxValue: 35, optimalMin: 26, optimalMax: 32},
-                    ]},
-                ]}
-            ]
-        },
-        {
-            id: 2, name: 'Corn', seasons: [
-                 { id: 2, cropId: 2, name: 'Summer', stages: [
-                    { id: 5, cropSeasonId: 2, name: 'Planting', durationDays: 7, order: 1, requirements: [
-                         { id: 9, stageId: 5, readingTypeId: 1, minValue: 60, maxValue: 80, optimalMin: 65, optimalMax: 75},
-                         { id: 10, stageId: 5, readingTypeId: 3, minValue: 15, maxValue: 25, optimalMin: 18, optimalMax: 22},
-                    ]},
-                    { id: 6, cropSeasonId: 2, name: 'Tasseling', durationDays: 40, order: 2, requirements: [
-                         { id: 11, stageId: 6, readingTypeId: 1, minValue: 65, maxValue: 85, optimalMin: 70, optimalMax: 80},
-                         { id: 12, stageId: 6, readingTypeId: 3, minValue: 20, maxValue: 33, optimalMin: 24, optimalMax: 30},
-                    ]},
-                 ]}
-            ]
-        }
-    ],
+interface FarmDto { id: string; name: string; code: string; lat: number; lon: number; address: string; ownerid: string; ownername: string; zonescount: number; activecropscount: number; }
+interface ZoneDto { id: string; name: string; area: number; soiltype: string; farmid: string; equipmentscount: number; }
+interface EquipmentDto { id: string; zoneid: string; readingtypeid: string; readingtypename: string; equipmentmodel: string; serialnumber: string; isactive: boolean; installationdate: string; }
+interface AlertDto { id: string; zoneid: string; equipmentid: string; cropid: string; cropname: string; cropgrowthstageid: string; stagename: string; readingtypeid: string; readingtypename: string; value: number; alerttype: string; message: string; severity: string; timestamp: string; isresolved: boolean; resolvedat: string; }
+interface ZoneCropDto { id: string; zoneid: string; cropid: string; cropname: string; stagename: string; plantingdate: string; isactive: boolean; }
+
+export interface LoginRequest { email: string; password: string; }
+export interface RegisterRequest { fullName: string; email: string; password: string; phoneNumber: string; }
+export interface OtpVerificationRequest { email: string; otp: string; }
+export interface AuthResponse { auth: { token: string }; user: User; }
+
+
+
+const mapFarm = (dto: FarmDto): Farm | null => {
+  if (!dto.id) { return null; }
+  return {
+    id: dto.id,
+    name: dto.name,
+    location: { address: dto.address, lat: dto.lat, lon: dto.lon },
+    ownerUserId: dto.ownerid,
+    code: dto.code,
+    description: `Active Zones: ${dto.zonescount}, Crops: ${dto.activecropscount}`
+  };
 };
 
-const simulateApi = <T,>(data: T, delay = 500): Promise<T> =>
-  new Promise(resolve => setTimeout(() => resolve(JSON.parse(JSON.stringify(data))), delay));
+const mapZone = (dto: ZoneDto): Zone => ({
+  id: dto.id,
+  farmId: dto.farmid,
+  name: dto.name,
+  area: dto.area,
+  soilType: dto.soiltype
+});
 
-// --- HELPER FUNCTIONS ---
-export function findCrop(cropId: number) {
-    return DB.cropCatalog.find(c => c.id === cropId);
-}
-export function findStage(crop: Crop | undefined, stageId: number) {
-    if (!crop) return null;
-    for (const season of crop.seasons) {
-        const stage = season.stages.find(s => s.id === stageId);
-        if (stage) return stage;
+const mapEquipment = (dto: EquipmentDto): Equipment => ({
+  id: dto.id,
+  zoneid: dto.zoneid,
+  readingtypeid: dto.readingtypeid,
+  serialnumber: dto.serialnumber,
+  equipmentmodel: dto.equipmentmodel,
+  installationdate: dto.installationdate,
+  isactive: dto.isactive,
+  name: dto.equipmentmodel, 
+  readingtypename: dto.readingtypename,
+  status: dto.isactive ? EquipmentStatus.Active : EquipmentStatus.Inactive,
+});
+
+const mapAlert = (dto: AlertDto): Alert => ({
+  id: dto.id,
+  zoneid: dto.zoneid,
+  equipmentid: dto.equipmentid,
+  cropid: dto.cropid,
+  cropname: dto.cropname,
+  cropgrowthstageid: dto.cropgrowthstageid,
+  stagename: dto.stagename,
+  readingtypeid: dto.readingtypeid,
+  readingtypename: dto.readingtypename,
+  value: dto.value,
+  alerttype: dto.alerttype,
+  message: dto.message,
+  severity: dto.severity,
+  timestamp: dto.timestamp,
+  isAcknowledged: dto.isresolved,
+  resolvedat: dto.resolvedat,
+});
+
+
+export const login = async (credentials: LoginRequest): Promise<AuthResponse> => {
+    const response = await httpClient.post<any>(API_ENDPOINTS.AUTH.LOGIN, credentials);
+    if (response && response.auth && response.user && response.auth.token) {
+        localStorage.setItem('authToken', response.auth.token);
+        return {
+          auth: { token: response.auth.token },
+          user: response.user, 
+        };
     }
-    return null;
-}
-export function findRequirements(stage: CropGrowthStage | null, readingTypeId: number) {
-    if (!stage) return null;
-    return stage.requirements.find(r => r.readingTypeId === readingTypeId) || null;
-}
-
-// --- STATIC DATA API ---
-export const getCropCatalog = () => simulateApi(DB.cropCatalog);
-export const getReadingTypes = () => simulateApi(DB.readingTypes);
-export const getUser = (userId: number) => simulateApi(DB.users.find(u => u.id === userId));
-
-// --- FARM API ---
-export const getFarms = (userId: number) => simulateApi(DB.farms.filter(f => f.ownerUserId === userId));
-export const createFarm = (farmData: Omit<Farm, 'id'>) => {
-    const newFarm = { ...farmData, id: Date.now() };
-    DB.farms.push(newFarm);
-    return simulateApi(newFarm);
-};
-export const updateFarm = (farmId: number, updates: Partial<Farm>) => {
-    const farmIndex = DB.farms.findIndex(f => f.id === farmId);
-    if (farmIndex === -1) return Promise.reject('Farm not found');
-    DB.farms[farmIndex] = { ...DB.farms[farmIndex], ...updates };
-    return simulateApi(DB.farms[farmIndex]);
-};
-export const deleteFarm = (farmId: number) => {
-    DB.farms = DB.farms.filter(f => f.id !== farmId);
-    // Also delete associated zones, equipment, etc.
-    const farmZones = DB.zones.filter(z => z.farmId === farmId).map(z => z.id);
-    DB.zones = DB.zones.filter(z => z.farmId !== farmId);
-    DB.equipments = DB.equipments.filter(e => !farmZones.includes(e.zoneId));
-    return simulateApi({ success: true });
+    throw new Error(response.message || "Login failed: Invalid data from server.");
 };
 
-// --- ZONE API ---
-export const getZonesByFarm = (farmId: number) => simulateApi(DB.zones.filter(z => z.farmId === farmId));
-export const createZone = (zoneData: Omit<Zone, 'id'>) => {
-    const newZone = { ...zoneData, id: Date.now() };
-    DB.zones.push(newZone);
-    return simulateApi(newZone);
-};
-export const updateZone = (zoneId: number, updates: Partial<Zone>) => {
-    const zoneIndex = DB.zones.findIndex(z => z.id === zoneId);
-    if (zoneIndex === -1) return Promise.reject('Zone not found');
-    DB.zones[zoneIndex] = { ...DB.zones[zoneIndex], ...updates };
-    return simulateApi(DB.zones[zoneIndex]);
-};
-export const deleteZone = (zoneId: number) => {
-    DB.zones = DB.zones.filter(z => z.id !== zoneId);
-    DB.equipments = DB.equipments.filter(e => e.zoneId !== zoneId);
-    return simulateApi({ success: true });
+export const register = async (data: RegisterRequest): Promise<any> => {
+  return httpClient.post(API_ENDPOINTS.AUTH.REGISTER, {
+    fullName: data.fullName,
+    email: data.email,
+    password: data.password,
+    phoneNumber: data.phoneNumber
+  });
 };
 
-// --- EQUIPMENT API ---
-export const getEquipmentsByFarm = (farmId: number) => {
-    const farmZoneIds = DB.zones.filter(z => z.farmId === farmId).map(z => z.id);
-    return simulateApi(DB.equipments.filter(e => farmZoneIds.includes(e.zoneId)));
-};
-export const createEquipment = (equipmentData: Omit<Equipment, 'id' | 'lastReadingAt'>) => {
-    const newEquipment = { ...equipmentData, id: Date.now(), lastReadingAt: new Date().toISOString() };
-    DB.equipments.push(newEquipment);
-    return simulateApi(newEquipment);
-};
-export const updateEquipment = (equipmentId: number, updates: Partial<Equipment>) => {
-    const eqIndex = DB.equipments.findIndex(e => e.id === equipmentId);
-    if (eqIndex === -1) return Promise.reject('Equipment not found');
-    DB.equipments[eqIndex] = { ...DB.equipments[eqIndex], ...updates };
-    return simulateApi(DB.equipments[eqIndex]);
-};
-export const deleteEquipment = (equipmentId: number) => {
-    DB.equipments = DB.equipments.filter(e => e.id !== equipmentId);
-    return simulateApi({ success: true });
-};
-
-
-// --- CROP ASSIGNMENT (ZoneCrop) API ---
-export const getZoneCropsByFarm = (farmId: number) => {
-    const farmZoneIds = DB.zones.filter(z => z.farmId === farmId).map(z => z.id);
-    return simulateApi(DB.zoneCrops.filter(zc => farmZoneIds.includes(zc.zoneId)));
-};
-export const assignCropToZone = (zoneCropData: Omit<ZoneCrop, 'id'>) => {
-    // Deactivate any other active crop in the same zone
-    DB.zoneCrops.forEach(zc => {
-        if (zc.zoneId === zoneCropData.zoneId && zc.isActive) {
-            zc.isActive = false;
-        }
+export const verifyOtp = async (data: OtpVerificationRequest): Promise<any> => {
+    return httpClient.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, {
+        email: data.email.trim(),
+        otp: data.otp.trim()
     });
-    const newZoneCrop = { ...zoneCropData, id: Date.now() };
-    DB.zoneCrops.push(newZoneCrop);
-    return simulateApi(newZoneCrop);
 };
 
-export const updateZoneCrop = (zoneCropId: number, updates: Partial<ZoneCrop>) => {
-    const zcIndex = DB.zoneCrops.findIndex(zc => zc.id === zoneCropId);
-    if (zcIndex === -1) return Promise.reject('ZoneCrop not found');
-    
-    // If this crop is being activated, deactivate others in the same zone
-    if (updates.isActive === true) {
-        const zoneId = DB.zoneCrops[zcIndex].zoneId;
-        DB.zoneCrops.forEach(zc => {
-            if (zc.zoneId === zoneId && zc.id !== zoneCropId) {
-                zc.isActive = false;
-            }
-        });
+export const resendOtp = async (email: string): Promise<any> => {
+  return httpClient.post(`${API_ENDPOINTS.AUTH.RESEND_VERIFY_OTP}?email=${email}`);
+};
+
+export const logout = async (): Promise<void> => {
+  await httpClient.post(API_ENDPOINTS.AUTH.LOGOUT);
+  localStorage.removeItem('authToken');
+};
+
+export const getCurrentUser = async (): Promise<User> => {
+  return httpClient.get<User>(API_ENDPOINTS.AUTH.ME);
+};
+
+export const getFarms = async (): Promise<Farm[]> => {
+  const response = await httpClient.get<any>(API_ENDPOINTS.FARMS.LIST);
+  if (response && Array.isArray(response.farms)) {
+    return response.farms.map(mapFarm).filter(Boolean) as Farm[];
+  }
+  return [];
+};
+
+export const createFarm = async (farmData: any): Promise<Farm> => {
+  const payload = {
+    name: farmData.name,
+    code: farmData.code || `F-${Date.now()}`,
+    lat: farmData.location?.lat || 0,
+    lon: farmData.location?.lon || 0,
+    address: farmData.location?.address || '',
+    OwnerId: String(farmData.ownerUserId)
+  };
+  const response = await httpClient.post<FarmDto>(API_ENDPOINTS.FARMS.CREATE, payload);
+  const mappedFarm = mapFarm(response);
+  if (!mappedFarm) throw new Error("Create farm failed: Invalid data from server");
+  return mappedFarm;
+};
+
+export const updateFarm = async (id: string, farmData: any): Promise<Farm> => {
+  const payload = { ...farmData, id: id };
+  const response = await httpClient.put<FarmDto>(`${API_ENDPOINTS.FARMS.UPDATE}?id=${id}`, payload);
+  const mappedFarm = mapFarm(response);
+  if (!mappedFarm) throw new Error("Update farm failed: Invalid data from server");
+  return mappedFarm;
+};
+
+export const deleteFarm = async (id: string): Promise<void> => {
+  return httpClient.delete(`${API_ENDPOINTS.FARMS.DELETE}?id=${id}`);
+};
+
+export const getZonesByFarm = async (farmId: string): Promise<Zone[]> => {
+  const response = await httpClient.get<any>(`${API_ENDPOINTS.ZONES.LIST_BY_FARM}?farmId=${farmId}`);
+  if (response && response.zones) {
+    return response.zones.map(mapZone);
+  }
+  return [];
+};
+
+export const createZone = async (zoneData: Omit<Zone, 'id'>): Promise<Zone> => {
+  const payload = {
+    name: zoneData.name,
+    area: Number(zoneData.area),
+    soiltype: zoneData.soilType,
+    farmid: String(zoneData.farmId)
+  };
+  const response = await httpClient.post<ZoneDto>(API_ENDPOINTS.ZONES.CREATE, payload);
+  return mapZone(response);
+};
+
+export const updateZone = async (id: string, zoneData: any): Promise<Zone> => {
+  const payload = { ...zoneData };
+  const response = await httpClient.put<ZoneDto>(`${API_ENDPOINTS.ZONES.UPDATE}?id=${id}`, payload);
+  return mapZone(response);
+};
+
+export const deleteZone = async (id: string): Promise<void> => {
+  return httpClient.delete(`${API_ENDPOINTS.ZONES.DELETE}?id=${id}`);
+};
+
+export const getEquipmentByFarm = async (farmId: string): Promise<Equipment[]> => {
+  const zones = await getZonesByFarm(farmId);
+  if (zones.length === 0) return [];
+  const promises = zones.map(zone => 
+    httpClient.get<any>(`${API_ENDPOINTS.EQUIPMENTS.LIST}?zoneId=${zone.id}`)
+  );
+  const responses = await Promise.all(promises);
+  let allEquipment: Equipment[] = [];
+  responses.forEach(res => {
+    if (res && res.equipments) {
+      allEquipment = [...allEquipment, ...res.equipments.map(mapEquipment)];
     }
-
-    DB.zoneCrops[zcIndex] = { ...DB.zoneCrops[zcIndex], ...updates };
-    return simulateApi(DB.zoneCrops[zcIndex]);
+  });
+  return allEquipment;
 };
 
-
-// --- ALERT API ---
-export const getAlertsByFarm = (farmId: number) => {
-     const farmZoneIds = DB.zones.filter(z => z.farmId === farmId).map(z => z.id);
-     return simulateApi(DB.alerts.filter(a => farmZoneIds.includes(a.zoneId)));
-};
-export const acknowledgeAlert = (alertId: number) => {
-    const alertIndex = DB.alerts.findIndex(a => a.id === alertId);
-    if (alertIndex === -1) return Promise.reject('Alert not found');
-    DB.alerts[alertIndex].isAcknowledged = true;
-    return simulateApi(DB.alerts[alertIndex]);
-};
-export const addAlert = (alert: Omit<Alert, 'id'>) => {
-    const newAlert = { ...alert, id: Date.now() };
-    DB.alerts.push(newAlert);
-    return newAlert;
+export const createEquipment = async (data: any): Promise<Equipment> => {
+  const payload = {
+    zoneid: String(data.zoneid),            
+    readingtypeid: String(data.readingtypeid), 
+    serialnumber: data.serialnumber,           
+    equipmentmodel: data.equipmentmodel,       
+    installationdate: data.installationdate || new Date().toISOString(),
+    isactive: data.isactive !== undefined ? data.isactive : true
+  };
+  const response = await httpClient.post<EquipmentDto>(API_ENDPOINTS.EQUIPMENTS.CREATE, payload);
+  return mapEquipment(response);
 };
 
-// --- REPORT API ---
-export const getReportsByFarm = (farmId: number) => {
-    return simulateApi(DB.reports.filter(r => r.farmId === farmId));
+export const updateEquipment = async (id: string, data: any): Promise<Equipment> => {
+  const payload = {
+      id: id,
+      readingtypeid: String(data.readingTypeId),
+      isactive: data.status === EquipmentStatus.Active
+  };
+  const response = await httpClient.put<EquipmentDto>(`${API_ENDPOINTS.EQUIPMENTS.UPDATE}?id=${id}`, payload);
+  return mapEquipment(response);
 };
-export const generateReport = (farmId: number) => {
-    const newReport: Report = {
-        id: `REP-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
-        date: new Date().toISOString().split('T')[0],
-        type: 'Weekly Summary',
-        author: 'System',
-        farmId: farmId
+
+export const deleteEquipment = async (id: string): Promise<void> => {
+  return httpClient.delete(`${API_ENDPOINTS.EQUIPMENTS.DELETE}?id=${id}`);
+};
+
+export const getAlertsByFarm = async (farmId: string): Promise<Alert[]> => {
+  try {
+    const zones = await getZonesByFarm(farmId);
+    if (zones.length === 0) return [];
+    const promises = zones.map(zone => 
+      httpClient.get<any>(`${API_ENDPOINTS.ALERTS.LIST}?zoneId=${zone.id}`)
+    );
+    const responses = await Promise.all(promises);
+    let allAlerts: Alert[] = [];
+    responses.forEach(res => {
+      if (res && Array.isArray(res.alerts)) {
+        allAlerts = [...allAlerts, ...res.alerts.map(mapAlert)];
+      }
+    });
+    return allAlerts;
+  } catch (error) {
+    console.error("Failed to fetch alerts by farm:", error);
+    return [];
+  }
+};
+
+export const acknowledgeAlert = async (alertId: string): Promise<Alert> => {
+  const updatedAlertDto = await httpClient.patch<any>(`${API_ENDPOINTS.ALERTS.RESOLVE}?id=${alertId}`, {});
+  return mapAlert(updatedAlertDto);
+};
+
+export const getReadingsByEquipment = async (equipmentId: string): Promise<SensorReading[]> => {
+    try {
+        const response = await httpClient.get<any>(`${API_ENDPOINTS.READINGS.LIST}?equipmentId=${equipmentId}`);
+        if (response && Array.isArray(response.readings)) {
+            return response.readings;
+        }
+        return [];
+    } catch (error) {
+        console.error(`Failed to fetch readings for equipment ${equipmentId}:`, error);
+        return [];
+    }
+};
+
+export const getCropCatalog = async (): Promise<Crop[]> => {
+  const response = await httpClient.get<any>(API_ENDPOINTS.CROPS.LIST);
+  if (response && response.crops) {
+    return response.crops.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        seasons: []
+    }));
+  }
+  return [];
+};
+
+export const getZoneCropsByFarm = async (farmId: string): Promise<ZoneCrop[]> => {
+    const zones = await getZonesByFarm(farmId);
+    if (zones.length === 0) return [];
+    const promises = zones.map(zone => 
+      httpClient.get<any>(`${API_ENDPOINTS.ZONE_CROPS.LIST}?zoneId=${zone.id}`)
+    );
+    const responses = await Promise.all(promises);
+    let allZoneCrops: ZoneCrop[] = [];
+    responses.forEach(res => {
+      if (res && res.zonecrops) {
+        const mapped = res.zonecrops.map((zc: ZoneCropDto) => ({
+            id: zc.id,
+            zoneId: zc.zoneid,
+            cropId: zc.cropid,
+            plantedAt: zc.plantingdate,
+            isActive: zc.isactive,
+        }));
+        allZoneCrops = [...allZoneCrops, ...mapped];
+      }
+    });
+    return allZoneCrops;
+};
+
+export const assignCropToZone = async (data: any): Promise<any> => {
+    const payload = {
+        zoneid: data.zoneid,
+        cropid: data.cropid,
+        cropgrowthstageid: data.cropgrowthstageid,
+        plantingdate: new Date(data.plantingdate).toISOString().split('T')[0],
+        isactive: data.isactive,
     };
-    DB.reports.push(newReport);
-    return simulateApi(newReport);
+    return httpClient.post(API_ENDPOINTS.ZONE_CROPS.CREATE, payload);
+};
+
+export const updateZoneCrop = async (id: string, updates: any): Promise<ZoneCrop> => {
+    const payload = { 
+        cropgrowthstageid: updates.cropgrowthstageid, 
+        isactive: updates.isactive 
+    };
+    
+    const response = await httpClient.put<any>(`${API_ENDPOINTS.ZONE_CROPS.UPDATE}?id=${id}`, payload);
+    return {
+        id: response.id,
+        zoneId: response.zoneid,
+        cropId: response.cropid,
+        isActive: response.isactive,
+        plantedAt: response.plantingdate,
+        currentStageId: 1, 
+    };
+};
+
+export const getCropDetails = async (cropId: string): Promise<Crop | null> => {
+  try {
+    const response = await httpClient.get<Crop>(`${API_ENDPOINTS.CROPS.GET_CROP}?id=${cropId}`);
+    console.log("Full Crop Details from API:", response); 
+    return response;
+  } catch (error) {
+    console.error(`Failed to fetch details for crop ${cropId}:`, error);
+    return null;
+  }
+};
+
+export const getReadingTypes = async (): Promise<ReadingType[]> => {
+  try {
+    const response = await httpClient.get<any>(API_ENDPOINTS.READING_TYPES.LIST);
+    if (response && Array.isArray(response.readingtypes)) {
+      return response.readingtypes.map((rt: any) => ({
+        id: rt.id,
+        code: rt.code,
+        category: rt.category,
+        displayname: rt.displayname, 
+        unit: rt.unit,
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error("Failed to fetch reading types:", error);
+    return [];
+  }
+};
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const getReportsByFarm = async (_farmId: string): Promise<any[]> => {
+    return [];
+};
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const generateReport = async (_farmId: string): Promise<any> => {
+    return { id: Date.now(), date: new Date().toISOString(), type: 'Weekly Summary', author: 'System' };
+};
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function findCrop(_cropId: string): Crop | undefined {
+  return undefined;
+}
+
+export function findStage(crop: Crop | undefined, stageId: string | number): CropGrowthStage | null {
+  if (!crop || !crop.growthstages) {
+    return null;
+  }
+
+  const stageIdAsString = stageId.toString();
+  const stage = crop.growthstages.find(s => s.id === stageIdAsString);
+  
+  return stage || null;
+}
+
+export function findRequirements(stage: any, readingTypeId: number) {
+  if (!stage || !stage.requirements) return null;
+  return stage.requirements.find((r: any) => r.readingTypeId === readingTypeId) || null;
 }

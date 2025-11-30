@@ -36,11 +36,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, onLogout, 
 
   return (
     <aside className="w-20 md:w-64 bg-card-light dark:bg-card-dark flex flex-col border-e border-border-light dark:border-border-dark transition-all duration-300">
-      <div className="flex items-center justify-center md:justify-start h-20 px-6 border-b border-border-light dark:border-border-dark">
-        <div className="flex-shrink-0">
-          <div className="w-32 h-10 bg-gray-200 dark:bg-slate-700 rounded animate-pulse hidden md:block">{/* Logo Placeholder */}</div>
-          <div className="w-10 h-10 bg-gray-200 dark:bg-slate-700 rounded-full animate-pulse md:hidden">{/* Logo Placeholder */}</div>
+      <div className="flex items-center justify-start h-20 border-b border-border-light dark:border-border-dark">
+       
+        <div className="flex items-center">
+          <img 
+            src="/SmartAgri_Logo.png" 
+            alt="SAMS Logo" 
+            className="h-25 w-25 mb-5 object-contain" />
+
+          <div className="hidden md:block -ml-2">
+            <h1 className="text-3xl font-bold text-primary leading-tight">
+               SmartAgri 
+            </h1>
         </div>
+      </div>
       </div>
       
       <nav className="flex-1 px-2 md:px-4 py-4 space-y-2">
@@ -57,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, onLogout, 
           >
             {item.icon}
             <span className="hidden md:block ms-4 font-medium">{item.label}</span>
-            {item.badge > 0 && (
+            {(item.badge || 0) > 0 && (
                  <span className="absolute top-2 end-2 md:relative md:top-auto md:end-auto md:ms-auto inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">{item.badge}</span>
             )}
           </button>

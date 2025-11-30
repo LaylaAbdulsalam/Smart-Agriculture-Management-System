@@ -62,14 +62,12 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-
         if (type === 'checkbox') {
             const { checked } = e.target as HTMLInputElement;
             setFormData(prev => ({ ...prev, [name]: checked }));
-            return;
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
         }
-        
-        setFormData(prev => ({ ...prev, [name]: value }));
     };
     
     const handleSubmit = (e: React.FormEvent) => {
@@ -172,3 +170,4 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
 };
 
 export default ZoneCropForm;
+

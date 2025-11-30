@@ -1,102 +1,199 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
-import { Zone, ZoneCrop, Crop, CropGrowthStage, SensorReading, ReadingType, CropStageRequirement } from '../types';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Farm, Zone, Equipment, SensorReading, Alert, Crop, ZoneCrop } from '../types';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 if (!API_KEY) {
-  // This will be handled by the environment, but as a fallback for local dev:
-  console.warn("API_KEY environment variable is not set. AI Features will not work.");
+  console.warn('⚠️ Gemini API Key is not configured. AI features will not work.');
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY! });
+const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 
-const recommendationSchema = {
-  type: Type.OBJECT,
-  properties: {
-    irrigationNeeded: { type: Type.BOOLEAN, description: 'Whether irrigation is needed right now.' },
-    recommendationText: { type: Type.STRING, description: 'A concise, actionable recommendation for the farmer.' },
-    cropHealthStatus: { type: Type.STRING, enum: ['Good', 'Fair', 'Critical'], description: 'Overall health assessment.' },
-    wateringSchedule: { type: Type.STRING, description: 'A suggested watering schedule, e.g., "Irrigate for 20 minutes now." or "No watering needed today."' },
-  },
-  required: ['irrigationNeeded', 'recommendationText', 'cropHealthStatus', 'wateringSchedule']
-};
+// ============================================
+// 📊 AI Report Generation
+// ============================================
 
-export type AIRecommendation = {
-    irrigationNeeded: boolean;
-    recommendationText: string;
-    cropHealthStatus: 'Good' | 'Fair' | 'Critical';
-    wateringSchedule: string;
+export interface FarmAnalysisData {
+  farm: Farm;
+  zones: Zone[];
+  zoneCrops: ZoneCrop[];
+  crops: Crop[];
+  equipment: Equipment[];
+  readings: SensorReading[];
+  alerts: Alert[];
 }
 
-export async function getAIRecommendation(
-  zone: Zone,
-  zoneCrop: ZoneCrop,
-  crop: Crop,
-  stage: CropGrowthStage,
-  requirements: CropStageRequirement[],
-  latestReadings: { readingType: ReadingType, reading: SensorReading }[]
-): Promise<AIRecommendation> {
-  if(!API_KEY) {
-      return Promise.reject("API Key is not configured.");
+export interface AIRecommendation {
+  overallHealth: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Critical';
+  summary: string;
+  irrigation: {
+    status: string;
+    recommendations: string[];
+  };
+  fertilization: {
+    status: string;
+    recommendations: string[];
+  };
+  cropHealth: {
+    status: string;
+    issues: string[];
+    recommendations: string[];
+  };
+  equipment: {
+    status: string;
+    issues: string[];
+  };
+  alerts: {
+    critical: number;
+    recommendations: string[];
+  };
+  nextActions: string[];
+}
+
+export async function generateFarmReport(data: FarmAnalysisData): Promise<AIRecommendation> {
+  if (!genAI) {
+    throw new Error('Gemini API is not configured');
   }
+
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
   
-  const readingsText = latestReadings.map(lr => `- ${lr.readingType.displayName}: ${lr.reading.value.toFixed(1)} ${lr.readingType.unit}`).join('\n');
-  const requirementsText = requirements.map(req => {
-      const readingType = latestReadings.find(lr => lr.readingType.id === req.readingTypeId)?.readingType;
-      return `- ${readingType?.displayName}: Optimal range ${req.optimalMin}-${req.optimalMax} ${readingType?.unit}, Absolute range ${req.minValue}-${req.maxValue} ${readingType?.unit}`;
-  }).join('\n');
-
   const prompt = `
-    You are an expert agricultural AI assistant for a smart farm.
-    Based on the following real-time data for a specific farm zone, provide a JSON object with your analysis and recommendations.
+You are an expert agricultural advisor. Analyze the following farm data and provide comprehensive recommendations.
 
-    Context:
-    - Zone Name: ${zone.name}
-    - Currently Planted Crop: ${crop.name}
-    - Current Growth Stage: ${stage.name}
+**Farm Information:**
+- Name: ${data.farm.name}
+- Location: ${data.farm.location.address}
+- Total Zones: ${data.zones.length}
 
-    Ideal Conditions for this Stage:
-    ${requirementsText}
+**Zones Data:**
+${data.zones.map(zone => {
+  const zoneCrop = data.zoneCrops.find(zc => zc.zoneId === zone.id && zc.isActive);
+  const crop = zoneCrop ? data.crops.find(c => c.id === zoneCrop.cropId) : null;
+  return `
+- Zone: ${zone.name}
+  - Area: ${zone.area} acres
+  - Soil Type: ${zone.soilType}
+  - Current Crop: ${crop?.name || 'None'}
+  - Planted Date: ${zoneCrop?.plantedAt || 'N/A'}
+`;
+}).join('\n')}
 
-    Current Sensor Readings:
-    ${readingsText}
-    
-    Analysis Task:
-    Compare the "Current Sensor Readings" to the "Ideal Conditions for this Stage". 
-    1. Determine if irrigation is needed. Irrigation is critical if any reading is outside the absolute range. It is recommended if readings are outside the optimal range but within the absolute range.
-    2. Assess the overall crop health status ('Good', 'Fair', 'Critical') based on how many readings are off-target.
-    3. Provide a very concise, actionable recommendation for the farmer.
-    4. Suggest a clear watering schedule (e.g., "Irrigate for 30 minutes now", "Monitor, no action needed", "Check for equipment fault").
+**Equipment Status:**
+${data.equipment.map(eq => `
+- ${eq.model} (${eq.serialNumber})
+  - Zone: ${data.zones.find(z => z.id === eq.zoneId)?.name}
+  - Status: ${eq.status}
+`).join('\n')}
 
-    Return a single JSON object matching the required schema. Do not include any other text or markdown.
-  `;
+**Recent Sensor Readings (last 10):**
+${data.readings.slice(-10).map(r => {
+  const equipment = data.equipment.find(eq => eq.id === r.equipmentId);
+  return `- Equipment ${equipment?.model}: ${r.value} at ${new Date(r.timestamp).toLocaleString()}`;
+}).join('\n')}
+
+**Active Alerts:**
+${data.alerts.filter(a => !a.isAcknowledged).map(a => `
+- ${a.message} (${new Date(a.timestamp).toLocaleString()})
+`).join('\n') || 'None'}
+
+**Please provide:**
+1. Overall farm health assessment (Excellent/Good/Fair/Poor/Critical)
+2. Summary of current status
+3. Irrigation recommendations
+4. Fertilization recommendations
+5. Crop health analysis
+6. Equipment status review
+7. Alert analysis and priority actions
+8. Next recommended actions
+
+Format your response as a JSON object matching this structure:
+{
+  "overallHealth": "Good",
+  "summary": "Brief overall assessment...",
+  "irrigation": {
+    "status": "Current irrigation status",
+    "recommendations": ["recommendation 1", "recommendation 2"]
+  },
+  "fertilization": {
+    "status": "Current fertilization status",
+    "recommendations": ["recommendation 1"]
+  },
+  "cropHealth": {
+    "status": "Overall crop health",
+    "issues": ["issue 1"],
+    "recommendations": ["recommendation 1"]
+  },
+  "equipment": {
+    "status": "Equipment status",
+    "issues": ["issue 1"]
+  },
+  "alerts": {
+    "critical": 0,
+    "recommendations": ["action 1"]
+  },
+  "nextActions": ["action 1", "action 2", "action 3"]
+}
+`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: recommendationSchema,
-      },
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
 
-    const jsonString = response.text.trim();
-    const parsedJson = JSON.parse(jsonString);
-
-    if (
-        typeof parsedJson.irrigationNeeded === 'boolean' &&
-        typeof parsedJson.recommendationText === 'string' &&
-        ['Good', 'Fair', 'Critical'].includes(parsedJson.cropHealthStatus) &&
-        typeof parsedJson.wateringSchedule === 'string'
-    ) {
-        return parsedJson as AIRecommendation;
-    } else {
-        throw new Error("AI response does not match the expected format.");
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
     }
+    
+    throw new Error('Could not parse AI response');
   } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    throw new Error("Failed to communicate with the AI model.");
+    console.error('Gemini API Error:', error);
+    throw new Error('Failed to generate farm report');
   }
+}
+
+// ============================================
+// 🌱 Zone-Specific Analysis
+// ============================================
+
+export async function analyzeZone(
+  zone: Zone,
+  zoneCrop: ZoneCrop | undefined,
+  crop: Crop | undefined,
+  equipment: Equipment[],
+  readings: SensorReading[],
+  alerts: Alert[]
+): Promise<string> {
+  if (!genAI) {
+    throw new Error('Gemini API is not configured');
+  }
+
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+  const prompt = `
+Analyze this specific farm zone and provide actionable recommendations:
+
+**Zone:** ${zone.name}
+- Area: ${zone.area} acres
+- Soil Type: ${zone.soilType}
+- Current Crop: ${crop?.name || 'None'}
+- Days since planting: ${zoneCrop ? Math.floor((Date.now() - new Date(zoneCrop.plantedAt).getTime()) / (1000 * 60 * 60 * 24)) : 'N/A'}
+
+**Equipment in this zone:**
+${equipment.map(eq => `- ${eq.model}: ${eq.status}`).join('\n')}
+
+**Recent readings:**
+${readings.slice(-5).map(r => `- Value: ${r.value} at ${new Date(r.timestamp).toLocaleTimeString()}`).join('\n')}
+
+**Alerts:**
+${alerts.length} active alert(s)
+
+Provide specific, actionable recommendations for this zone in 3-5 bullet points.
+`;
+
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  return response.text();
 }

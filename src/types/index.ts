@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export enum Theme {
   Light = 'light',
   Dark = 'dark',
@@ -24,27 +25,26 @@ export enum Page {
   Profile = 'Profile',
 }
 
-export type UserRole = 'Farm Owner' | 'Farm Manager' | 'Farm Worker' | 'Irrigation Engineer' | 'System Admin';
-
 export interface User {
-  id: number;
-  name: string;
+  id: string;          
+  username: string;    
   email: string;
-  role: UserRole;
-  avatarUrl: string;
+  usertype: string;    
+  roles: string[];    
+  avatarUrl?: string;  
 }
 
 export interface Farm {
-  id: number;
+  id: string;
   name: string;
   description: string;
   location: {
-      lat: number;
-      lon: number;
-      address: string;
+    lat: number;
+    lon: number;
+    address: string;
   };
   code: string;
-  ownerUserId: number;
+  ownerUserId: string;
 }
 
 export enum ReadingTypeCode {
@@ -56,63 +56,71 @@ export enum ReadingTypeCode {
 }
 
 export interface ReadingType {
-  id: number;
-  code: ReadingTypeCode;
-  displayName: string;
+  id: string; 
+  code: string;
+  category: string;
+  displayname: string; 
   unit: string;
 }
 
 export interface CropStageRequirement {
-  id: number;
-  stageId: number;
-  readingTypeId: number;
-  minValue: number;
-  maxValue: number;
-  optimalMin: number;
-  optimalMax: number;
+  id: string;
+  readingtypecode: string;
+  readingtypename: string;
+  unit: string;
+  minvalue: number;
+  maxvalue: number;
+  optimalmin: number;
+  optimalmax: number;
 }
 
 export interface CropGrowthStage {
-  id: number;
-  cropSeasonId: number;
-  name: string;
-  durationDays: number;
+  id: string;
+  stagename: string;
   order: number;
-  requirements: CropStageRequirement[];
+  durationdays: number;
+  description: string;
+  requirements: any[]; 
 }
 
 export interface CropSeason {
-  id: number;
-  cropId: number;
-  name: string; // "Winter", "Summer"
-  stages: CropGrowthStage[];
+  id: string;
+  seasonname: string;
+  plantingstartmonth: number;
+  expectedrangedays: string;
 }
 
 export interface Crop {
-  id: number;
+  id: string;
   name: string;
-  seasons: CropSeason[];
+  growthstages?: CropGrowthStage[]; 
+  seasons?: CropSeason[];
+
+  // Added optional fields for UI helper logic if API doesn't send them in list
+  optimalTemp?: { min: number, max: number };
+  optimalHum?: { min: number, max: number };
+  optimalMoisture?: { min: number, max: number };
+  growthDurationDays?: number;
 }
 
 export interface ZoneCrop {
-  id: number;
-  zoneId: number;
-  cropId: number;
-  plantedAt: string; // ISO Date string
-  expectedHarvestAt: string; // ISO Date string
-  currentStageId: number;
+  id: string; 
+  zoneId: string; 
+  cropId: string; 
+  plantedAt: string;
+  expectedHarvestAt?: string;
+  currentStageId?: number; 
   isActive: boolean;
   actualHarvestAt?: string;
   yieldWeightKg?: number;
 }
 
 export interface Zone {
-  id: number;
-  farmId: number;
+  id: string; 
+  farmId: string; 
   name: string;
-  area: number; // in acres or sqm
+  area: number;
   soilType: string;
-  activeZoneCrop?: ZoneCrop; // The currently planted crop
 }
 
 export enum EquipmentStatus {
@@ -122,20 +130,24 @@ export enum EquipmentStatus {
 }
 
 export interface Equipment {
-  id: number;
-  zoneId: number;
-  serialNumber: string;
-  model: string;
-  readingTypeId: number;
-  status: EquipmentStatus;
-  lastReadingAt: string; // ISO Date string
+  id: string;
+  zoneid: string;
+  readingtypeid: string;
+  serialnumber: string;
+  equipmentmodel: string;
+  installationdate: string;
+  isactive: boolean;
+  name?: string; 
+  readingtypename?: string; 
+  status?: EquipmentStatus; 
 }
 
 export interface SensorReading {
-  id: number;
-  equipmentId: number;
+  id: string;
+  equipmentid: string; 
   value: number;
-  timestamp: string; // ISO Date string
+  timestamp: string;
+  readingtype: string;
 }
 
 export enum ThresholdType {
@@ -143,36 +155,152 @@ export enum ThresholdType {
   AboveMax = 'AboveMax',
 }
 
+export enum AlertSeverity {
+  Critical = 'Critical',
+  Warning = 'Warning',
+  Info = 'Info'
+}
+
 export interface Alert {
-  id: number;
-  zoneId: number;
-  zoneCropId: number;
-  readingTypeId: number;
-  stageId: number;
+  id: string;
+  zoneid: string;
+  equipmentid: string;
+  cropid: string;
+  cropname: string;
+  cropgrowthstageid: string;
+  stagename: string;
+  readingtypeid: string;
+  readingtypename: string;
   value: number;
+  alerttype: string;
   message: string;
-  thresholdType: ThresholdType;
+  severity: string;
+  timestamp: string;
   isAcknowledged: boolean;
-  createdAt: string; // ISO Date string
+  resolvedat: string;
 }
 
 export interface Report {
-    id: string;
-    date: string;
-    type: string;
-    author: string;
-    farmId: number;
+  id: string;
+  date: string;
+  type: string;
+  author: string;
+  farmId: number;
 }
-
 
 export interface HistoricalDataPoint {
   time: string;
   value: number;
 }
 
-// Utility type for props that are passed down through multiple components
 export interface AppContext {
-    crops: Crop[];
-    readingTypes: ReadingType[];
-    t: TFunction;
+  crops: Crop[];
+  readingTypes: ReadingType[];
+  t: TFunction;
 }
+
+export interface AIRecommendation {
+  overallHealth: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Critical';
+  summary: string;
+  irrigation: {
+    status: string;
+    recommendations: string[];
+  };
+  fertilization: {
+    status: string;
+    recommendations: string[];
+  };
+  cropHealth: {
+    status: string;
+    issues: string[];
+    recommendations: string[];
+  };
+  equipment: {
+    status: string;
+    issues: string[];
+  };
+  alerts: {
+    critical: number;
+    recommendations: string[];
+  };
+  nextActions: string[];
+}
+
+export interface ApiResponse<T> {
+  data: T;
+  success: boolean;
+  message: string;
+}
+
+export interface LoginResult {
+  token: string;
+  user: User;
+}
+
+export interface RegisterResult {
+  token: string;
+  user: User;
+}
+
+// Request DTOs
+export interface CreateFarmRequest {
+  name: string;
+  description: string;
+  location: {
+    address: string;
+    lat: number;
+    lon: number;
+  };
+  code: string;
+  ownerUserId: number;
+}
+
+export interface UpdateFarmRequest {
+  id: number;
+  name?: string;
+  description?: string;
+  location?: {
+    address?: string;
+    lat?: number;
+    lon?: number;
+  };
+  code?: string;
+}
+
+export interface CreateZoneRequest {
+  name: string;
+  area: number;
+  soilType: string;
+  farmId: number;
+}
+
+export interface UpdateZoneRequest {
+  id: number;
+  name?: string;
+  area?: number;
+  soilType?: string;
+}
+
+export interface ZoneCropRequest {
+  zoneId: number;
+  cropId: number;
+  currentStageId: number;
+  plantedAt: string;
+  expectedHarvestAt: string;
+  isActive: boolean;
+  yieldWeightKg?: number;
+  actualHarvestAt?: string;
+}
+
+export interface UpdateZoneCropRequest {
+  id: number;
+  zoneId?: number;
+  cropId?: number;
+  currentStageId?: number;
+  plantedAt?: string;
+  expectedHarvestAt?: string;
+  isActive?: boolean;
+  yieldWeightKg?: number;
+  actualHarvestAt?: string;
+}
+

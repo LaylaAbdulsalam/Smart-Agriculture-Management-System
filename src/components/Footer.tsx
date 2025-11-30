@@ -16,8 +16,8 @@ const Footer: React.FC<FooterProps> = ({ t, setActivePage }) => {
   return (
     <footer className="w-full flex-shrink-0 bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark px-4 md:px-6 lg:px-8 py-4">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-gray-200 dark:bg-slate-700 rounded animate-pulse">{/* Logo Placeholder */}</div>
+        <div className="flex items-center">
+          <img src="/SmartAgri_Logo.png" alt="SmartAgri Logo" className="h-20 w-20 mx-auto mb-4" />
           <p className="text-sm text-text-light-secondary dark:text-dark-secondary">
             &copy; 2025 {t('sidebar.appName')}. {t('footer.rights')}
           </p>

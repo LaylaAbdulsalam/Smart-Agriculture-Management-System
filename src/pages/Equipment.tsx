@@ -1,19 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
-import { Equipment, Zone, SensorReading, ReadingType, EquipmentStatus, TFunction } from '../types';
+import { Equipment, EquipmentStatus, TFunction } from '../types';
+import { useFarm } from '../contexts/FarmContext';
 import Modal from '../components/Modal';
 import EquipmentForm from '../components/EquipmentForm';
 import DeleteConfirmation from '../components/DeleteConfirmation';
-import * as api from '../services/apiService';
-
 
 interface EquipmentPageProps {
-    equipments: Equipment[];
-    setEquipments: React.Dispatch<React.SetStateAction<Equipment[]>>;
-    zones: Zone[];
-    readings: SensorReading[];
-    readingTypes: ReadingType[];
     t: TFunction;
-    farmId: number | null;
 }
 
 const statusClasses = {
@@ -22,8 +16,18 @@ const statusClasses = {
   [EquipmentStatus.Inactive]: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
 };
 
+const EquipmentPage: React.FC<EquipmentPageProps> = ({ t }) => {
+  const { 
+    equipments, 
+    zones, 
+    readings, 
+    readingTypes, 
+    selectedFarmId, 
+    addEquipment, 
+    updateEquipment, 
+    deleteEquipment 
+  } = useFarm();
 
-const EquipmentPage: React.FC<EquipmentPageProps> = ({ equipments, setEquipments, zones, readings, readingTypes, t, farmId }) => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
@@ -43,28 +47,29 @@ const EquipmentPage: React.FC<EquipmentPageProps> = ({ equipments, setEquipments
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveEquipment = (equipmentData: Omit<Equipment, 'id'|'lastReadingAt'>) => {
-    if (selectedEquipment) {
-      api.updateEquipment(selectedEquipment.id, equipmentData).then(updatedEq => {
-        setEquipments(prev => prev.map(e => e.id === updatedEq.id ? updatedEq : e));
-      });
-    } else {
-      api.createEquipment(equipmentData).then(newEq => {
-        setEquipments(prev => [...prev, newEq]);
-      });
+  const handleSaveEquipment = async (equipmentData: any) => {
+    try {
+      if (selectedEquipment) {
+        await updateEquipment(selectedEquipment.id, equipmentData);
+      } else {
+        await addEquipment(equipmentData);
+      }
+      setIsFormModalOpen(false);
+    } catch (error) {
+      console.error("Error saving equipment:", error);
     }
-    setIsFormModalOpen(false);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (selectedEquipment) {
-        api.deleteEquipment(selectedEquipment.id).then(() => {
-            setEquipments(prev => prev.filter(e => e.id !== selectedEquipment.id));
-        });
+      try {
+        await deleteEquipment(selectedEquipment.id);
+        setIsDeleteModalOpen(false);
+      } catch (error) {
+        console.error("Error deleting equipment:", error);
+      }
     }
-    setIsDeleteModalOpen(false);
   };
-
 
   return (
     <>
@@ -92,7 +97,7 @@ const EquipmentPage: React.FC<EquipmentPageProps> = ({ equipments, setEquipments
                     {t('equipmentPage.description')}
                 </p>
             </div>
-            <button onClick={handleOpenCreateModal} disabled={!farmId || zones.length === 0} className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-primary-focus transition-colors disabled:bg-gray-400">
+            <button onClick={handleOpenCreateModal} disabled={!selectedFarmId || zones.length === 0} className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-primary-focus transition-colors disabled:bg-gray-400">
                 + Add Equipment
             </button>
         </div>
@@ -111,23 +116,25 @@ const EquipmentPage: React.FC<EquipmentPageProps> = ({ equipments, setEquipments
           </thead>
           <tbody>
             {equipments.map((eq) => {
-                const zone = zones.find(z => z.id === eq.zoneId);
-                const readingType = readingTypes.find(rt => rt.id === eq.readingTypeId);
+                const zone = zones.find(z => z.id.toString() === eq.zoneid);
+                const readingType = readingTypes.find(rt => rt.id.toString() === eq.readingtypeid);
                 const lastReading = readings
-                    .filter(r => r.equipmentId === eq.id)
+                    .filter(r => r.equipmentid.toString() === eq.id)
                     .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+
+                const status = eq.isactive ? EquipmentStatus.Active : EquipmentStatus.Inactive;
 
                 return (
                   <tr key={eq.id} className="border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
                     <th scope="row" className="px-6 py-4 font-medium text-black dark:text-white whitespace-nowrap">
-                        <p>{eq.model}</p>
-                        <p className="text-xs font-normal text-text-light-secondary dark:text-dark-secondary">SN: {eq.serialNumber}</p>
+                        <p>{eq.equipmentmodel}</p>
+                        <p className="text-xs font-normal text-text-light-secondary dark:text-dark-secondary">SN: {eq.serialnumber}</p>
                     </th>
                     <td className="px-6 py-4">{zone?.name}</td>
-                    <td className="px-6 py-4">{readingType?.displayName}</td>
+                    <td className="px-6 py-4">{readingType?.displayname}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusClasses[eq.status]}`}>
-                        {eq.status}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusClasses[status]}`}>
+                        {status}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-semibold text-black dark:text-white">
@@ -140,6 +147,13 @@ const EquipmentPage: React.FC<EquipmentPageProps> = ({ equipments, setEquipments
                   </tr>
                 )
             })}
+            {equipments.length === 0 && (
+                <tr>
+                    <td colSpan={6} className="text-center py-6 text-text-light-secondary dark:text-dark-secondary">
+                        No equipment found.
+                    </td>
+                </tr>
+            )}
           </tbody>
         </table>
       </div>

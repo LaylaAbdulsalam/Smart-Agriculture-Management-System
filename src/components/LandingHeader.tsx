@@ -24,9 +24,9 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({ activePage, setActivePage
         <header className="sticky top-0 z-40 w-full backdrop-blur flex-none transition-colors duration-500 lg:z-50 lg:border-b lg:border-slate-900/10 dark:border-slate-50/[0.06] bg-white/80 dark:bg-slate-900/80">
             <div className="container mx-auto px-4">
                 <div className="flex items-center justify-between h-20">
-                    <button onClick={() => setActivePage(Page.Home)} className="flex items-center gap-3">
-                         <div className="w-10 h-10 bg-gray-200 dark:bg-slate-700 rounded animate-pulse">{/* Logo Placeholder */}</div>
-                         <span className="text-2xl font-bold text-black dark:text-white">{t('sidebar.appName')}</span>
+                    <button onClick={() => setActivePage(Page.Home)} className="flex items-center">
+                        <img src="/SmartAgri_Logo.png" alt="SmartAgri Logo" className="h-25 w-25 mb-4" />
+                        <span className="text-3xl font-bold text-black dark:text-white">SmartAgri</span>
                     </button>
                     <nav className="hidden md:flex items-center gap-8">
                         {navItems.map(item => (

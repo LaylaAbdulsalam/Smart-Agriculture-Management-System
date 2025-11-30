@@ -1,23 +1,21 @@
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
-import { Alert, Zone, ReadingType, TFunction } from '../types';
+import { TFunction } from '../types';
+import { useFarm } from '../contexts/FarmContext';
 
 interface AlertsPageProps {
-  alerts: Alert[];
-  zones: Zone[];
-  readingTypes: ReadingType[];
-  onAcknowledge: (alertId: number) => void;
   t: TFunction;
 }
 
-const AlertsPage: React.FC<AlertsPageProps> = ({ alerts, zones, readingTypes, onAcknowledge, t }) => {
+const AlertsPage: React.FC<AlertsPageProps> = ({ t }) => {
+    const { alerts, zones, readingTypes, acknowledgeAlert } = useFarm();
     const [filter, setFilter] = useState<'all' | 'new' | 'acknowledged'>('all');
 
     const filteredAlerts = alerts.filter(alert => {
         if (filter === 'new') return !alert.isAcknowledged;
         if (filter === 'acknowledged') return alert.isAcknowledged;
         return true;
-    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return (
     <div className="space-y-6">
@@ -64,8 +62,8 @@ const AlertsPage: React.FC<AlertsPageProps> = ({ alerts, zones, readingTypes, on
                   <tr key={alert.id} className="border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
                     <td className="px-6 py-4 font-semibold text-black dark:text-white">{zone?.name}</td>
                     <td className="px-6 py-4">{alert.message}</td>
-                    <td className="px-6 py-4 font-mono">{alert.value.toFixed(1)} {readingType?.unit}</td>
-                    <td className="px-6 py-4">{new Date(alert.createdAt).toLocaleString()}</td>
+                    <td className="px-6 py-4 font-mono">{alert.value ? `${alert.value.toFixed(1)} ${readingType?.unit || ''}` : '-'}</td>
+                    <td className="px-6 py-4">{new Date(alert.timestamp).toLocaleString()}</td>
                     <td className="px-6 py-4">
                       {alert.isAcknowledged ? (
                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
@@ -79,7 +77,7 @@ const AlertsPage: React.FC<AlertsPageProps> = ({ alerts, zones, readingTypes, on
                     </td>
                     <td className="px-6 py-4">
                         {!alert.isAcknowledged && (
-                             <button onClick={() => onAcknowledge(alert.id)} className="px-3 py-1 text-sm font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20">
+                             <button onClick={() => acknowledgeAlert(alert.id)} className="px-3 py-1 text-sm font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20">
                                 {t('acknowledge')}
                             </button>
                         )}
@@ -87,6 +85,13 @@ const AlertsPage: React.FC<AlertsPageProps> = ({ alerts, zones, readingTypes, on
                   </tr>
                 );
             })}
+             {filteredAlerts.length === 0 && (
+                <tr>
+                    <td colSpan={6} className="text-center py-6 text-text-light-secondary dark:text-dark-secondary">
+                        No alerts found.
+                    </td>
+                </tr>
+            )}
           </tbody>
         </table>
       </div>

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Page, TFunction, Farm } from '../types';
+import { User, Page, TFunction, Farm, Theme, Language} from '../types';
 import DefaultUserIcon from './DefaultUserIcon';
+import ThemeToggle from './ThemeToggle'; 
 
 interface HeaderProps {
   activePage: Page;
@@ -9,9 +10,13 @@ interface HeaderProps {
   setActivePage: (page: Page) => void;
   t: TFunction;
   farms: Farm[];
-  selectedFarmId: number | null;
-  onSelectFarm: (farmId: number | null) => void;
+  selectedFarmId: string | null;
+  onSelectFarm: (farmId: string | null) => void;
   unacknowledgedAlertsCount: number;
+  theme: Theme;
+  toggleTheme: () => void;
+  language: Language;
+  setLanguage: (lang: Language) => void;
 }
 
 const ProfileIcon: React.FC<{className?: string}> = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${className || ''}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>;
@@ -21,7 +26,7 @@ const AlertsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 
 const ChevronDownIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>;
 
 
-const Header: React.FC<HeaderProps> = ({ activePage, user, onLogout, setActivePage, t, farms, selectedFarmId, onSelectFarm, unacknowledgedAlertsCount }) => {
+const Header: React.FC<HeaderProps> = ({ activePage, user, onLogout, setActivePage, t, farms, selectedFarmId, onSelectFarm, unacknowledgedAlertsCount, theme, toggleTheme}) => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [farmDropdownOpen, setFarmDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -64,7 +69,7 @@ const Header: React.FC<HeaderProps> = ({ activePage, user, onLogout, setActivePa
     setUserDropdownOpen(false);
   }
   
-  const handleFarmSelect = (farmId: number) => {
+  const handleFarmSelect = (farmId: string) => {
     onSelectFarm(farmId);
     setFarmDropdownOpen(false);
   }
@@ -72,6 +77,7 @@ const Header: React.FC<HeaderProps> = ({ activePage, user, onLogout, setActivePa
   return (
     <header className="h-20 flex-shrink-0 flex items-center justify-between px-4 md:px-6 lg:px-8 bg-card-light dark:bg-card-dark border-b border-border-light dark:border-border-dark">
       <div className="flex items-center gap-4 " >
+        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
         <h1 className="text-xl md:text-2xl font-semibold text-black dark:text-white">{pageTitles[activePage]}</h1>
         {farms.length > 0 && selectedFarm && (
           <div className="relative" ref={farmDropdownRef}>
@@ -109,8 +115,8 @@ const Header: React.FC<HeaderProps> = ({ activePage, user, onLogout, setActivePa
               </div>
             )}
             <div className="hidden md:block text-left rtl:text-right">
-              <p className="font-semibold text-sm text-black dark:text-white">{user.name}</p>
-              <p className="text-xs text-text-light-secondary dark:text-dark-secondary truncate max-w-[150px]">{user.role}</p>
+              <p className="font-semibold text-sm text-black dark:text-white">{user.username}</p>
+              <p className="text-xs text-text-light-secondary dark:text-dark-secondary truncate max-w-[150px]">{user.usertype}</p>
             </div>
           </button>
           {userDropdownOpen && (

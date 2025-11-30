@@ -1,4 +1,4 @@
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from 'react';
 
 export type Language = 'en' | 'ar';
@@ -159,7 +159,7 @@ export const translations = {
     },
     // Auth Pages
     login: {
-        title: 'Log in to SAMS',
+        title: 'Log in to SmartAgri',
         description: 'Enter your credentials to access your farm dashboard.',
         email: 'Email address',
         password: 'Password',
@@ -170,7 +170,7 @@ export const translations = {
         createAccount: 'Create a new account',
     },
     signup: {
-        title: 'Create Your SAMS Account',
+        title: 'Create Your SmartAgri Account',
         choosePhoto: 'Choose profile photo',
         name: 'Name',
         email: 'Email address',
