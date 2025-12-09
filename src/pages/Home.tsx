@@ -1,10 +1,6 @@
 import React from 'react';
-import { TFunction, Page } from '../types';
-
-interface HomeProps {
-    setActivePage: (page: Page) => void;
-    t: TFunction;
-}
+import { TFunction } from '../types';
+import { useNavigate } from 'react-router-dom';
 
 // Icons for features section
 const MonitorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mb-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
@@ -20,12 +16,17 @@ const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; description:
     </div>
 );
 
-const Home: React.FC<HomeProps> = ({ setActivePage, t }) => {
+interface HomeProps {
+    t: TFunction;
+}
+
+const Home: React.FC<HomeProps> = ({ t }) => {
+    const navigate = useNavigate();
+
     return (
         <div className="animate-fade-in">
             {/* Hero Section */}
             <section className="relative h-[60vh] md:h-[70vh] flex items-center justify-center text-center text-white overflow-hidden">
-                {/* Background image */}
                 <div 
                     className="absolute inset-0 z-0" 
                     style={{ 
@@ -34,14 +35,12 @@ const Home: React.FC<HomeProps> = ({ setActivePage, t }) => {
                         backgroundPosition: 'center'
                     }}
                 ></div>
-                {/* Dark overlay */}
                 <div className="absolute inset-0 bg-black/60 z-10"></div>
-                {/* Text content */}
                 <div className="relative container mx-auto px-4 z-20">
                     <h1 className="text-4xl md:text-6xl font-extrabold mb-4 leading-tight">{t('home.heroTitle')}</h1>
                     <p className="text-lg md:text-xl max-w-3xl mx-auto mb-8">{t('home.heroSubtitle')}</p>
                     <button 
-                        onClick={() => setActivePage(Page.SignUp)} 
+                        onClick={() => navigate('/signup')} 
                         className="px-8 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary-focus transition-colors text-lg"
                     >
                         {t('home.getStarted')}
@@ -62,7 +61,7 @@ const Home: React.FC<HomeProps> = ({ setActivePage, t }) => {
                 </div>
             </section>
 
-            {/* Vision and Mission Section */}
+            {/* Vision & Mission Section */}
             <section className="py-16 md:py-24 bg-card-light dark:bg-card-dark">
                 <div className="container mx-auto px-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-center md:text-left rtl:md:text-right">

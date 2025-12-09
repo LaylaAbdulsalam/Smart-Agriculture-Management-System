@@ -115,8 +115,7 @@ const Profile: React.FC<ProfileProps> = ({ user, setUser, t }) => {
                         <DefaultUserIcon className="w-24 h-24 text-slate-500 dark:text-slate-400" />
                     </div>
                  )}
-                <h3 className="text-xl font-bold">{localUser.name}</h3>
-                <p className="text-text-light-secondary dark:text-dark-secondary">{localUser.role}</p>
+                <h3 className="text-xl font-bold">{localUser.username}</h3>
                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={onFileChange} />
                 <button onClick={() => fileInputRef.current?.click()} className="mt-4 cursor-pointer px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-focus transition-colors">
                   {t('profilePage.changePicture')}
@@ -131,22 +130,13 @@ const Profile: React.FC<ProfileProps> = ({ user, setUser, t }) => {
               <form className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium">{t('profilePage.fullName')}</label>
-                  <input type="text" id="name" name="name" value={localUser.name} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-background-light dark:bg-slate-700 border border-border-light dark:border-border-dark rounded-md" />
+                  <input type="text" id="name" name="name" value={localUser.username} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-background-light dark:bg-slate-700 border border-border-light dark:border-border-dark rounded-md" />
                 </div>
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium">{t('profilePage.emailAddress')}</label>
                   <input type="email" id="email" name="email" value={localUser.email} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-background-light dark:bg-slate-700 border border-border-light dark:border-border-dark rounded-md" />
                 </div>
-                <div>
-                  <label htmlFor="role" className="block text-sm font-medium">{t('profilePage.role')}</label>
-                  <select id="role" name="role" value={localUser.role} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-background-light dark:bg-slate-700 border border-border-light dark:border-border-dark rounded-md" disabled>
-                    <option>Farm Owner</option>
-                    <option>Farm Manager</option>
-                    <option>Farm Worker</option>
-                    <option>Irrigation Engineer</option>
-                    <option>System Admin</option>
-                  </select>
-                </div>
+    
                 <div className="border-t border-border-light dark:border-border-dark pt-4">
                   <button type="button" className="px-4 py-2 text-sm font-medium text-primary hover:underline">
                     {t('profilePage.changePassword')}

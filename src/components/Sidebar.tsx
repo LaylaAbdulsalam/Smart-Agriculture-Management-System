@@ -1,9 +1,8 @@
 import React from 'react';
-import { Page, TFunction } from '../types';
+import { NavLink, useNavigate } from 'react-router-dom'; 
+import { TFunction } from '../types';
 
 interface SidebarProps {
-  activePage: Page;
-  setActivePage: (page: Page) => void;
   onLogout: () => void;
   t: TFunction;
   unacknowledgedAlertsCount: number;
@@ -19,96 +18,109 @@ const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-
 const ProfileIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
 
+const Sidebar: React.FC<SidebarProps> = ({ onLogout, t, unacknowledgedAlertsCount }) => {
+  const navigate = useNavigate(); 
 
-const Sidebar: React.FC<SidebarProps> = ({ activePage, setActivePage, onLogout, t, unacknowledgedAlertsCount }) => {
+  const handleLogout = () => {
+    onLogout(); 
+    navigate('/');
+  };
+
   const navItems = [
-    { page: Page.Dashboard, icon: <DashboardIcon />, label: t('sidebar.dashboard') },
-    { page: Page.Farms, icon: <FarmsIcon />, label: 'Farms' },
-    { page: Page.Zones, icon: <ZonesIcon />, label: t('sidebar.zones') },
-    { page: Page.Equipment, icon: <EquipmentIcon />, label: t('sidebar.equipment') },
-    { page: Page.Alerts, icon: <AlertsIcon />, label: t('sidebar.alerts'), badge: unacknowledgedAlertsCount },
-    { page: Page.Reports, icon: <ReportsIcon />, label: t('sidebar.reports') },
+    { to: '/dashboard', icon: <DashboardIcon />, label: t('sidebar.dashboard') },
+    { to: '/farms', icon: <FarmsIcon />, label: 'Farms' },
+    { to: '/zones', icon: <ZonesIcon />, label: t('sidebar.zones') },
+    { to: '/equipment', icon: <EquipmentIcon />, label: t('sidebar.equipment') },
+    { to: '/alerts', icon: <AlertsIcon />, label: t('sidebar.alerts'), badge: unacknowledgedAlertsCount },
+    { to: '/reports', icon: <ReportsIcon />, label: t('sidebar.reports') },
   ];
-  
+
   const settingsNav = [
-    { page: Page.Settings, icon: <SettingsIcon />, label: t('sidebar.settings') },
+    { to: '/settings', icon: <SettingsIcon />, label: t('sidebar.settings') },
   ];
 
   return (
     <aside className="w-20 md:w-64 bg-card-light dark:bg-card-dark flex flex-col border-e border-border-light dark:border-border-dark transition-all duration-300">
       <div className="flex items-center justify-start h-20 border-b border-border-light dark:border-border-dark">
-       
         <div className="flex items-center">
           <img 
             src="/SmartAgri_Logo.png" 
             alt="SAMS Logo" 
             className="h-25 w-25 mb-5 object-contain" />
-
           <div className="hidden md:block -ml-2">
-            <h1 className="text-3xl font-bold text-primary leading-tight">
-               SmartAgri 
-            </h1>
+            <h1 className="text-3xl font-bold text-primary leading-tight">SmartAgri</h1>
+          </div>
         </div>
       </div>
-      </div>
-      
+
       <nav className="flex-1 px-2 md:px-4 py-4 space-y-2">
         <p className="hidden md:block px-4 text-xs font-semibold text-text-light-secondary dark:text-dark-secondary uppercase tracking-wider">{t('sidebar.mainMenu')}</p>
+
         {navItems.map(item => (
-          <button
-            key={item.page}
-            onClick={() => setActivePage(item.page)}
-            className={`flex items-center justify-center md:justify-start p-3 w-full rounded-lg transition-colors duration-200 relative ${
-              activePage === item.page
-                ? 'bg-primary text-white'
-                : 'text-text-light-secondary dark:text-dark-secondary hover:bg-gray-100 dark:hover:bg-slate-700'
-            }`}
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `flex items-center justify-center md:justify-start p-3 w-full rounded-lg transition-colors duration-200 relative ${
+                isActive
+                  ? 'bg-primary text-white'
+                  : 'text-text-light-secondary dark:text-dark-secondary hover:bg-gray-100 dark:hover:bg-slate-700'
+              }`
+            }
           >
             {item.icon}
             <span className="hidden md:block ms-4 font-medium">{item.label}</span>
             {(item.badge || 0) > 0 && (
-                 <span className="absolute top-2 end-2 md:relative md:top-auto md:end-auto md:ms-auto inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">{item.badge}</span>
+              <span className="absolute top-2 end-2 md:relative md:top-auto md:end-auto md:ms-auto inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                {item.badge}
+              </span>
             )}
-          </button>
+          </NavLink>
         ))}
+
         <p className="hidden md:block px-4 pt-4 text-xs font-semibold text-text-light-secondary dark:text-dark-secondary uppercase tracking-wider">{t('sidebar.configuration')}</p>
-         {settingsNav.map(item => (
-          <button
-            key={item.page}
-            onClick={() => setActivePage(item.page)}
-            className={`flex items-center justify-center md:justify-start p-3 w-full rounded-lg transition-colors duration-200 ${
-              activePage === item.page
-                ? 'bg-primary text-white'
-                : 'text-text-light-secondary dark:text-dark-secondary hover:bg-gray-100 dark:hover:bg-slate-700'
-            }`}
+
+        {settingsNav.map(item => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `flex items-center justify-center md:justify-start p-3 w-full rounded-lg transition-colors duration-200 ${
+                isActive
+                  ? 'bg-primary text-white'
+                  : 'text-text-light-secondary dark:text-dark-secondary hover:bg-gray-100 dark:hover:bg-slate-700'
+              }`
+            }
           >
             {item.icon}
             <span className="hidden md:block ms-4 font-medium">{item.label}</span>
-          </button>
+          </NavLink>
         ))}
       </nav>
 
       <div className="px-2 md:px-4 py-4 mt-auto border-t border-border-light dark:border-border-dark">
-        <button
-          onClick={() => setActivePage(Page.Profile)}
-          className={`flex items-center justify-center md:justify-start p-3 w-full rounded-lg transition-colors duration-200 mb-2 ${
-            activePage === Page.Profile
-              ? 'bg-primary/10 text-primary'
-              : 'text-text-light-secondary dark:text-dark-secondary hover:bg-gray-100 dark:hover:bg-slate-700'
-          }`}
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            `flex items-center justify-center md:justify-start p-3 w-full rounded-lg transition-colors duration-200 mb-2 ${
+              isActive
+                ? 'bg-primary/10 text-primary'
+                : 'text-text-light-secondary dark:text-dark-secondary hover:bg-gray-100 dark:hover:bg-slate-700'
+            }`
+          }
         >
           <ProfileIcon />
           <span className="hidden md:block ms-4 font-medium">{t('sidebar.profile')}</span>
-        </button>
+        </NavLink>
+
         <button
-          onClick={onLogout}
+          onClick={handleLogout} 
           className="flex items-center justify-center md:justify-start p-3 w-full rounded-lg transition-colors duration-200 text-text-light-secondary dark:text-dark-secondary hover:bg-red-500/10 hover:text-red-500"
         >
           <LogoutIcon />
           <span className="hidden md:block ms-4 font-medium">{t('sidebar.logout')}</span>
         </button>
       </div>
-
     </aside>
   );
 };

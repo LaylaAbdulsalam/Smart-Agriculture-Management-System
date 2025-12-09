@@ -1,21 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import httpClient from './httpClient';
 import { API_ENDPOINTS } from '../config/api.config';
-import { User, Farm, Zone, Crop, Equipment, Alert, ZoneCrop, ReadingType, SensorReading, EquipmentStatus, CropGrowthStage} from '../types';
+import { User, Farm, Zone, Crop, Equipment, Alert, ZoneCrop, ReadingType, SensorReading, EquipmentStatus, CropGrowthStage, AlertSeverity } from '../types';
 
+// --- DTO Interfaces ---
 interface FarmDto { id: string; name: string; code: string; lat: number; lon: number; address: string; ownerid: string; ownername: string; zonescount: number; activecropscount: number; }
 interface ZoneDto { id: string; name: string; area: number; soiltype: string; farmid: string; equipmentscount: number; }
 interface EquipmentDto { id: string; zoneid: string; readingtypeid: string; readingtypename: string; equipmentmodel: string; serialnumber: string; isactive: boolean; installationdate: string; }
 interface AlertDto { id: string; zoneid: string; equipmentid: string; cropid: string; cropname: string; cropgrowthstageid: string; stagename: string; readingtypeid: string; readingtypename: string; value: number; alerttype: string; message: string; severity: string; timestamp: string; isresolved: boolean; resolvedat: string; }
-interface ZoneCropDto { id: string; zoneid: string; cropid: string; cropname: string; stagename: string; plantingdate: string; isactive: boolean; }
+interface ZoneCropDto { id: string; zoneid: string; cropid: string; cropname: string; stagename: string; plantingdate: string; isactive: boolean; cropgrowthstageid: string; }
+interface SensorReadingDto { id: string; equipmentid: string; value: number; timestamp: string; readingtype: string; }
 
+// --- Request Interfaces ---
 export interface LoginRequest { email: string; password: string; }
-export interface RegisterRequest { fullName: string; email: string; password: string; phoneNumber: string; }
+export interface RegisterRequest { FullName: string; email: string; password: string; PhoneNumber: string; }
 export interface OtpVerificationRequest { email: string; otp: string; }
 export interface AuthResponse { auth: { token: string }; user: User; }
 
-
-
+// --- Mappers ---
 const mapFarm = (dto: FarmDto): Farm | null => {
   if (!dto.id) { return null; }
   return {
@@ -38,37 +40,41 @@ const mapZone = (dto: ZoneDto): Zone => ({
 
 const mapEquipment = (dto: EquipmentDto): Equipment => ({
   id: dto.id,
-  zoneid: dto.zoneid,
-  readingtypeid: dto.readingtypeid,
-  serialnumber: dto.serialnumber,
-  equipmentmodel: dto.equipmentmodel,
-  installationdate: dto.installationdate,
-  isactive: dto.isactive,
+  zoneId: dto.zoneid,
+  readingTypeId: dto.readingtypeid,
+  serialNumber: dto.serialnumber,
+  model: dto.equipmentmodel,
+  lastReadingAt: dto.installationdate, 
   name: dto.equipmentmodel, 
-  readingtypename: dto.readingtypename,
   status: dto.isactive ? EquipmentStatus.Active : EquipmentStatus.Inactive,
+  readingTypeName: dto.readingtypename
 });
 
 const mapAlert = (dto: AlertDto): Alert => ({
   id: dto.id,
-  zoneid: dto.zoneid,
-  equipmentid: dto.equipmentid,
-  cropid: dto.cropid,
-  cropname: dto.cropname,
-  cropgrowthstageid: dto.cropgrowthstageid,
-  stagename: dto.stagename,
-  readingtypeid: dto.readingtypeid,
-  readingtypename: dto.readingtypename,
+  zoneId: dto.zoneid,
+  equipmentId: dto.equipmentid,
+  cropId: dto.cropid,
+  cropName: dto.cropname,
+  stageName: dto.stagename,
+  readingTypeId: dto.readingtypeid,
+  readingTypeName: dto.readingtypename,
   value: dto.value,
-  alerttype: dto.alerttype,
   message: dto.message,
-  severity: dto.severity,
+  severity: dto.severity as AlertSeverity,
   timestamp: dto.timestamp,
   isAcknowledged: dto.isresolved,
-  resolvedat: dto.resolvedat,
 });
 
+const mapSensorReading = (dto: SensorReadingDto): SensorReading => ({
+  id: dto.id,
+  equipmentId: dto.equipmentid, 
+  value: dto.value,
+  timestamp: dto.timestamp,
+  readingType: dto.readingtype 
+});
 
+// --- Auth Services ---
 export const login = async (credentials: LoginRequest): Promise<AuthResponse> => {
     const response = await httpClient.post<any>(API_ENDPOINTS.AUTH.LOGIN, credentials);
     if (response && response.auth && response.user && response.auth.token) {
@@ -82,19 +88,23 @@ export const login = async (credentials: LoginRequest): Promise<AuthResponse> =>
 };
 
 export const register = async (data: RegisterRequest): Promise<any> => {
-  return httpClient.post(API_ENDPOINTS.AUTH.REGISTER, {
-    fullName: data.fullName,
-    email: data.email,
-    password: data.password,
-    phoneNumber: data.phoneNumber
-  });
+  return httpClient.post(API_ENDPOINTS.AUTH.REGISTER, data);
 };
 
 export const verifyOtp = async (data: OtpVerificationRequest): Promise<any> => {
-    return httpClient.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, {
-        email: data.email.trim(),
-        otp: data.otp.trim()
-    });
+    try {
+        console.log("Trying Login Verify Endpoint...");
+        return await httpClient.post('/api/Auth/login/verify', { 
+          email: data.email, 
+          otp: data.otp 
+        });
+      } catch (error: any) {
+        console.warn("Login Verify failed, trying Email Verify Endpoint...", error);
+        return await httpClient.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, { 
+          email: data.email, 
+          code: data.otp 
+        });
+      }
 };
 
 export const resendOtp = async (email: string): Promise<any> => {
@@ -110,6 +120,7 @@ export const getCurrentUser = async (): Promise<User> => {
   return httpClient.get<User>(API_ENDPOINTS.AUTH.ME);
 };
 
+// --- Farm Services ---
 export const getFarms = async (): Promise<Farm[]> => {
   const response = await httpClient.get<any>(API_ENDPOINTS.FARMS.LIST);
   if (response && Array.isArray(response.farms)) {
@@ -145,6 +156,7 @@ export const deleteFarm = async (id: string): Promise<void> => {
   return httpClient.delete(`${API_ENDPOINTS.FARMS.DELETE}?id=${id}`);
 };
 
+// --- Zone Services ---
 export const getZonesByFarm = async (farmId: string): Promise<Zone[]> => {
   const response = await httpClient.get<any>(`${API_ENDPOINTS.ZONES.LIST_BY_FARM}?farmId=${farmId}`);
   if (response && response.zones) {
@@ -174,6 +186,7 @@ export const deleteZone = async (id: string): Promise<void> => {
   return httpClient.delete(`${API_ENDPOINTS.ZONES.DELETE}?id=${id}`);
 };
 
+// --- Equipment Services ---
 export const getEquipmentByFarm = async (farmId: string): Promise<Equipment[]> => {
   const zones = await getZonesByFarm(farmId);
   if (zones.length === 0) return [];
@@ -192,12 +205,12 @@ export const getEquipmentByFarm = async (farmId: string): Promise<Equipment[]> =
 
 export const createEquipment = async (data: any): Promise<Equipment> => {
   const payload = {
-    zoneid: String(data.zoneid),            
-    readingtypeid: String(data.readingtypeid), 
-    serialnumber: data.serialnumber,           
-    equipmentmodel: data.equipmentmodel,       
-    installationdate: data.installationdate || new Date().toISOString(),
-    isactive: data.isactive !== undefined ? data.isactive : true
+    zoneid: String(data.zoneId),            
+    readingtypeid: String(data.readingTypeId), 
+    serialnumber: data.serialNumber,           
+    equipmentmodel: data.model,       
+    installationdate: new Date().toISOString(),
+    isactive: data.status === 'Active'
   };
   const response = await httpClient.post<EquipmentDto>(API_ENDPOINTS.EQUIPMENTS.CREATE, payload);
   return mapEquipment(response);
@@ -205,7 +218,6 @@ export const createEquipment = async (data: any): Promise<Equipment> => {
 
 export const updateEquipment = async (id: string, data: any): Promise<Equipment> => {
   const payload = {
-      id: id,
       readingtypeid: String(data.readingTypeId),
       isactive: data.status === EquipmentStatus.Active
   };
@@ -214,9 +226,12 @@ export const updateEquipment = async (id: string, data: any): Promise<Equipment>
 };
 
 export const deleteEquipment = async (id: string): Promise<void> => {
-  return httpClient.delete(`${API_ENDPOINTS.EQUIPMENTS.DELETE}?id=${id}`);
+  return httpClient.delete(API_ENDPOINTS.EQUIPMENTS.DELETE, {
+    params: { id: id }
+  });
 };
 
+// --- Alert Services ---
 export const getAlertsByFarm = async (farmId: string): Promise<Alert[]> => {
   try {
     const zones = await getZonesByFarm(farmId);
@@ -243,11 +258,12 @@ export const acknowledgeAlert = async (alertId: string): Promise<Alert> => {
   return mapAlert(updatedAlertDto);
 };
 
+// --- Reading Services ---
 export const getReadingsByEquipment = async (equipmentId: string): Promise<SensorReading[]> => {
     try {
         const response = await httpClient.get<any>(`${API_ENDPOINTS.READINGS.LIST}?equipmentId=${equipmentId}`);
         if (response && Array.isArray(response.readings)) {
-            return response.readings;
+            return response.readings.map(mapSensorReading);
         }
         return [];
     } catch (error) {
@@ -256,6 +272,7 @@ export const getReadingsByEquipment = async (equipmentId: string): Promise<Senso
     }
 };
 
+// --- Crop Services ---
 export const getCropCatalog = async (): Promise<Crop[]> => {
   const response = await httpClient.get<any>(API_ENDPOINTS.CROPS.LIST);
   if (response && response.crops) {
@@ -282,8 +299,11 @@ export const getZoneCropsByFarm = async (farmId: string): Promise<ZoneCrop[]> =>
             id: zc.id,
             zoneId: zc.zoneid,
             cropId: zc.cropid,
+            cropName: zc.cropname, 
+            stageName: zc.stagename, 
             plantedAt: zc.plantingdate,
             isActive: zc.isactive,
+            currentStageId: zc.cropgrowthstageid
         }));
         allZoneCrops = [...allZoneCrops, ...mapped];
       }
@@ -302,28 +322,33 @@ export const assignCropToZone = async (data: any): Promise<any> => {
     return httpClient.post(API_ENDPOINTS.ZONE_CROPS.CREATE, payload);
 };
 
-export const updateZoneCrop = async (id: string, updates: any): Promise<ZoneCrop> => {
+export const updateZoneCrop = async (id: number, updates: any): Promise<ZoneCrop> => {
     const payload = { 
         cropgrowthstageid: updates.cropgrowthstageid, 
         isactive: updates.isactive 
     };
-    
     const response = await httpClient.put<any>(`${API_ENDPOINTS.ZONE_CROPS.UPDATE}?id=${id}`, payload);
+    
     return {
         id: response.id,
         zoneId: response.zoneid,
         cropId: response.cropid,
         isActive: response.isactive,
         plantedAt: response.plantingdate,
-        currentStageId: 1, 
+        currentStageId: response.cropgrowthstageid,
+        cropName: response.cropname,
+        stageName: response.stagename
     };
 };
 
 export const getCropDetails = async (cropId: string): Promise<Crop | null> => {
   try {
-    const response = await httpClient.get<Crop>(`${API_ENDPOINTS.CROPS.GET_CROP}?id=${cropId}`);
-    console.log("Full Crop Details from API:", response); 
-    return response;
+    const response = await httpClient.get<any>(`${API_ENDPOINTS.CROPS.GET_CROP}?id=${cropId}`);
+    if (!response) return null;
+    return {
+      ...response,
+      growthStages: response.growthstages || response.growthStages 
+    };
   } catch (error) {
     console.error(`Failed to fetch details for crop ${cropId}:`, error);
     return null;
@@ -332,13 +357,13 @@ export const getCropDetails = async (cropId: string): Promise<Crop | null> => {
 
 export const getReadingTypes = async (): Promise<ReadingType[]> => {
   try {
-    const response = await httpClient.get<any>(API_ENDPOINTS.READING_TYPES.LIST);
+    const response = await httpClient.get<any>('/api/ReadingTypes/list'); 
     if (response && Array.isArray(response.readingtypes)) {
       return response.readingtypes.map((rt: any) => ({
         id: rt.id,
         code: rt.code,
         category: rt.category,
-        displayname: rt.displayname, 
+        displayName: rt.displayname, 
         unit: rt.unit,
       }));
     }
@@ -348,27 +373,40 @@ export const getReadingTypes = async (): Promise<ReadingType[]> => {
     return [];
   }
 };
+
+// --- Mock Reports & Analytics ---
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const getReportsByFarm = async (_farmId: string): Promise<any[]> => {
-    return [];
+export const getReportsByFarm = async (farmId: string): Promise<any[]> => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return [
+        { id: 'RPT-001', date: new Date(Date.now() - 86400000 * 1).toISOString(), type: 'Daily Water Usage', author: 'System AI' },
+        { id: 'RPT-002', date: new Date(Date.now() - 86400000 * 2).toISOString(), type: 'Soil Health Analysis', author: 'Dr. Ahmed (Consultant)' },
+    ];
 };
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const generateReport = async (_farmId: string): Promise<any> => {
-    return { id: Date.now(), date: new Date().toISOString(), type: 'Weekly Summary', author: 'System' };
+export const generateReport = async (farmId: string): Promise<any> => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { 
+        id: `RPT-${Math.floor(Math.random() * 1000)}`, 
+        date: new Date().toISOString(), 
+        type: 'On-Demand Analysis', 
+        author: 'User Request' 
+    };
 };
+
+// --- Helper Functions ---
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function findCrop(_cropId: string): Crop | undefined {
+export function findCrop(cropId: string): Crop | undefined {
   return undefined;
 }
 
 export function findStage(crop: Crop | undefined, stageId: string | number): CropGrowthStage | null {
-  if (!crop || !crop.growthstages) {
+  if (!crop || !crop.growthStages) {
     return null;
   }
-
   const stageIdAsString = stageId.toString();
-  const stage = crop.growthstages.find(s => s.id === stageIdAsString);
-  
+  const stage = crop.growthStages.find(s => s.id === stageIdAsString);
   return stage || null;
 }
 

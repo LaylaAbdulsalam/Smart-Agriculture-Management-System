@@ -15,33 +15,49 @@ const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ chi
   </div>
 );
 
+const generateInitialWaterData = (): HistoricalDataPoint[] => {
+  const data: HistoricalDataPoint[] = [];
+  const now = new Date();
+  for (let i = 24; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+      const hour = time.getHours();
+      const baseUsage = (hour >= 6 && hour <= 18) ? 80 : 20; 
+      const randomVariation = Math.random() * 15;
+      
+      data.push({
+          time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          value: Number((baseUsage + randomVariation).toFixed(1))
+      });
+  }
+  return data;
+};
+
 const Reports: React.FC<ReportsProps> = ({ t }) => {
   const { selectedFarmId } = useFarm();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(false);
-  const historicalWaterUsage: HistoricalDataPoint[] = [];
+  const [waterUsageData] = useState(generateInitialWaterData);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-        if (selectedFarmId) {
-            setLoading(true);
-            api.getReportsByFarm(selectedFarmId)
-            .then((data: any) => {
-                setReports(data as Report[]);
-            })
-            .catch((err: any) => {
-                console.error("Failed to load reports", err);
-                setReports([]);
-            })
-            .finally(() => {
-                setLoading(false);
-            });
-        } else {
+    if (selectedFarmId) {
+        // The following line is a valid use case for setting state in an effect
+        // to show a loading indicator before an async operation.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setLoading(true);
+        api.getReportsByFarm(selectedFarmId)
+        .then((data: any) => {
+            setReports(data as Report[]);
+        })
+        .catch((err: any) => {
+            console.error("Failed to load reports", err);
             setReports([]);
-        }
-    }, 0);
-
-    return () => clearTimeout(timer);
+        })
+        .finally(() => {
+            setLoading(false);
+        });
+    } else {
+        setReports([]);
+    }
   }, [selectedFarmId]);
 
   const handleGenerateReport = () => {
@@ -51,7 +67,8 @@ const Reports: React.FC<ReportsProps> = ({ t }) => {
       .then((newReport: any) => {
         const formattedReport: Report = {
             ...newReport,
-            id: String(newReport.id)
+            id: String(newReport.id),
+            farmId: String(selectedFarmId)
         };
         setReports(prev => [formattedReport, ...prev]);
       })
@@ -59,7 +76,7 @@ const Reports: React.FC<ReportsProps> = ({ t }) => {
   };
 
   const handleExport = (format: 'PDF' | 'CSV') => {
-    alert(`Exporting as ${format} (Simulation)`);
+    alert(`Simulating export of ${reports.length} reports as ${format}...`);
   };
 
   return (
@@ -88,7 +105,12 @@ const Reports: React.FC<ReportsProps> = ({ t }) => {
         </div>
       </Card>
 
-      <ChartComponent title={t('reportsPage.waterUsageTrend')} data={historicalWaterUsage} dataKey="value" color="#3b82f6" />
+      <ChartComponent 
+        title="Water Usage Trend (L/hr)" 
+        data={waterUsageData} 
+        dataKey="value" 
+        color="#0ea5e9" 
+      />
       
       <div className="overflow-x-auto bg-card-light dark:bg-card-dark rounded-xl shadow-md">
         <table className="w-full text-sm text-left rtl:text-right text-text-light-secondary dark:text-dark-secondary">
@@ -107,8 +129,16 @@ const Reports: React.FC<ReportsProps> = ({ t }) => {
                 reports.map((report) => (
                 <tr key={report.id} className="border-b dark:border-slate-700 even:bg-card-light dark:even:bg-card-dark odd:bg-slate-50 dark:odd:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700">
                     <th scope="row" className="px-6 py-4 font-medium text-black dark:text-white whitespace-nowrap">{report.id}</th>
-                    <td className="px-6 py-4">{new Date(report.date).toLocaleDateString()}</td>
-                    <td className="px-6 py-4">{report.type}</td>
+                    <td className="px-6 py-4">{new Date(report.date).toLocaleDateString()} {new Date(report.date).toLocaleTimeString()}</td>
+                    <td className="px-6 py-4">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                            report.type.includes('Weekly') ? 'bg-purple-100 text-purple-800' :
+                            report.type.includes('Water') ? 'bg-blue-100 text-blue-800' :
+                            'bg-green-100 text-green-800'
+                        }`}>
+                            {report.type}
+                        </span>
+                    </td>
                     <td className="px-6 py-4">{report.author}</td>
                 </tr>
                 ))

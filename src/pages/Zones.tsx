@@ -127,9 +127,9 @@ const Zones: React.FC<ZonesProps> = ({ t }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {zones.map(zone => {
                     const activeCrop = zoneCrops.find(zc => zc.zoneId === zone.id && zc.isActive);
-                    const zoneEquipments = equipments.filter(eq => eq.zoneid === zone.id);
-                    const zoneReadings = readings.filter(r => zoneEquipments.some(eq => eq.id === r.equipmentid));
-                    const zoneAlerts = alerts.filter(a => a.zoneid === zone.id && !a.isAcknowledged);
+                    const zoneEquipments = equipments.filter(eq => eq.zoneId === zone.id);
+                    const zoneReadings = readings.filter(r => zoneEquipments.some(eq => eq.id === r.equipmentId));
+                    const zoneAlerts = alerts.filter(a => a.zoneId === zone.id && !a.isAcknowledged);
 
                     return (
                     <ZoneCard 

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Zone, ZoneCrop, Crop, ReadingType, TFunction } from '../types';
 import Modal from './Modal';
 import GrowthStageWidget from './GrowthStageWidget';
@@ -15,22 +15,36 @@ interface ZoneDetailModalProps {
   readingTypes: ReadingType[];
   t: TFunction;
   onAssignCrop: (zoneCropData: Omit<ZoneCrop, 'id'>) => Promise<ZoneCrop>;
-  onUpdateZoneCrop: (zoneCropId: string, updates: Partial<ZoneCrop>) => Promise<ZoneCrop>;
+  onUpdateZoneCrop: (zoneCropId: number, updates: Partial<ZoneCrop>) => Promise<ZoneCrop>;
 }
 
 const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone, zoneCrops, crops, readingTypes, t, onAssignCrop, onUpdateZoneCrop }) => {
-    const [isFormVisible, setIsFormVisible] = useState(false);
-    const activeZoneCrop = zoneCrops.find(zc => zc.zoneId === zone.id && zc.isActive);
-    const activeCrop = activeZoneCrop ? crops.find(c => c.id === activeZoneCrop.cropId) : undefined;
+    const activeZoneCrop = zoneCrops.find(zc => Number(zc.zoneId) === Number(zone.id) && zc.isActive);
+    
+    const [isFormVisible, setIsFormVisible] = useState(!activeZoneCrop);
+    
+    const activeCrop = activeZoneCrop ? crops.find(c => Number(c.id) === Number(activeZoneCrop.cropId)) : undefined;
     const activeStage = activeCrop && activeZoneCrop && activeZoneCrop.currentStageId !== undefined ? api.findStage(activeCrop, activeZoneCrop.currentStageId) : undefined;
 
- const handleSave = (data: any) => {
+    useEffect(() => {
+        if (isOpen) {
+            const hasActive = zoneCrops.some(zc => Number(zc.zoneId) === Number(zone.id) && zc.isActive);
+            
+            const timer = setTimeout(() => {
+                setIsFormVisible(!hasActive);
+            }, 0);
+            
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen, zone.id, zoneCrops]);
+
+    const handleSave = (data: any) => {
         if (activeZoneCrop) {
-            onUpdateZoneCrop(activeZoneCrop.id, data).then(() => {
+            onUpdateZoneCrop(Number(activeZoneCrop.id), data).then(() => {
                 setIsFormVisible(false);
             });
         } else {
-            onAssignCrop(data).then(() => {
+            onAssignCrop({ ...data, zoneId: Number(zone.id) }).then(() => {
                 setIsFormVisible(false);
             });
         }
@@ -38,18 +52,11 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
     
     const handleDeactivate = () => {
         if (activeZoneCrop) {
-            onUpdateZoneCrop(activeZoneCrop.id, { isActive: false, actualHarvestAt: new Date().toISOString() }).then(() => {
-                onClose(); // Close main modal after deactivation
+            onUpdateZoneCrop(Number(activeZoneCrop.id), { isActive: false, actualHarvestAt: new Date().toISOString() }).then(() => {
+                onClose();
             });
         }
     };
-    
-    // Reset form visibility when modal is closed/re-opened
-    React.useEffect(() => {
-        if (!isOpen) {
-            setIsFormVisible(false);
-        }
-    }, [isOpen]);
 
     const getModalTitle = () => {
         if(isFormVisible) {

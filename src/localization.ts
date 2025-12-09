@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useCallback } from 'react';
-
-export type Language = 'en' | 'ar';
+import { useCallback } from 'react';
+import { Language } from './types'; 
 
 export const translations = {
   en: {
@@ -470,43 +469,35 @@ export const translations = {
   },
 };
 
-export const useLocalization = () => {
-    const [language, setLanguage] = useState<Language>(
-        () => (localStorage.getItem('language') as Language) || 'en'
-    );
-
-    useEffect(() => {
-        localStorage.setItem('language', language);
-        document.documentElement.lang = language;
-        document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
-    }, [language]);
-
+// This is the NEW and CORRECT version of the hook
+export const useLocalization = (language: Language) => {
     const t = useCallback(
         (key: string, replacements?: Record<string, string | number>): string => {
             const keys = key.split('.');
-            let template: any = translations[language];
+            let template: any = translations[language] || translations.en;
             for (const k of keys) {
                 if (template) {
                     template = template[k];
                 } else {
-                    break;
+                    return key; // Return the key itself if path is broken
                 }
             }
 
             if (typeof template !== 'string') {
-                return key; // Return key if not found
+                return key; // Return key if the final value is not a string
             }
 
+            let result = template;
             if (replacements) {
                 Object.keys(replacements).forEach(rKey => {
                     const regex = new RegExp(`{{${rKey}}}`, 'g');
-                    template = template.replace(regex, String(replacements[rKey]));
+                    result = result.replace(regex, String(replacements[rKey]));
                 });
             }
-            return template;
+            return result;
         },
-        [language]
+        [language] // This dependency array is the key to making it reactive
     );
 
-    return { language, setLanguage, t };
+    return { t };
 };

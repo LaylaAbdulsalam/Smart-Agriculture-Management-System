@@ -58,45 +58,44 @@ export enum ReadingTypeCode {
 export interface ReadingType {
   id: string; 
   code: string;
-  category: string;
-  displayname: string; 
+  category?: string;
+  displayName: string; 
   unit: string;
 }
 
 export interface CropStageRequirement {
   id: string;
-  readingtypecode: string;
-  readingtypename: string;
+  readingTypeCode: string; 
+  readingTypeName: string; 
   unit: string;
-  minvalue: number;
-  maxvalue: number;
-  optimalmin: number;
-  optimalmax: number;
+  minValue: number; 
+  maxValue: number; 
+  optimalMin: number; 
+  optimalMax: number; 
 }
 
 export interface CropGrowthStage {
   id: string;
-  stagename: string;
+  stagename: string; 
   order: number;
-  durationdays: number;
+  durationDays: number; 
   description: string;
-  requirements: any[]; 
+  requirements: CropStageRequirement[]; 
 }
 
 export interface CropSeason {
   id: string;
-  seasonname: string;
-  plantingstartmonth: number;
-  expectedrangedays: string;
+  seasonName: string; 
+  plantingStartMonth: number; 
+  expectedRangeDays: string; 
 }
 
 export interface Crop {
   id: string;
   name: string;
-  growthstages?: CropGrowthStage[]; 
+  growthStages?: CropGrowthStage[]; 
   seasons?: CropSeason[];
-
-  // Added optional fields for UI helper logic if API doesn't send them in list
+  // Optional fields for UI helpers
   optimalTemp?: { min: number, max: number };
   optimalHum?: { min: number, max: number };
   optimalMoisture?: { min: number, max: number };
@@ -107,9 +106,11 @@ export interface ZoneCrop {
   id: string; 
   zoneId: string; 
   cropId: string; 
+  cropName?: string;
   plantedAt: string;
   expectedHarvestAt?: string;
-  currentStageId?: number; 
+  currentStageId: string; 
+  stageName?: string; 
   isActive: boolean;
   actualHarvestAt?: string;
   yieldWeightKg?: number;
@@ -131,23 +132,22 @@ export enum EquipmentStatus {
 
 export interface Equipment {
   id: string;
-  zoneid: string;
-  readingtypeid: string;
-  serialnumber: string;
-  equipmentmodel: string;
-  installationdate: string;
-  isactive: boolean;
-  name?: string; 
-  readingtypename?: string; 
-  status?: EquipmentStatus; 
+  zoneId: string; 
+  readingTypeId: string; 
+  serialNumber: string;
+  model: string; 
+  lastReadingAt: string; 
+  status: EquipmentStatus; 
+  name: string; 
+  readingTypeName?: string; 
 }
 
 export interface SensorReading {
   id: string;
-  equipmentid: string; 
+  equipmentId: string; 
   value: number;
   timestamp: string;
-  readingtype: string;
+  readingType?: string; 
 }
 
 export enum ThresholdType {
@@ -163,21 +163,18 @@ export enum AlertSeverity {
 
 export interface Alert {
   id: string;
-  zoneid: string;
-  equipmentid: string;
-  cropid: string;
-  cropname: string;
-  cropgrowthstageid: string;
-  stagename: string;
-  readingtypeid: string;
-  readingtypename: string;
+  zoneId: string; 
+  equipmentId?: string; 
+  cropId?: string; 
+  cropName?: string;
+  stageName?: string;
+  readingTypeId: string; 
+  readingTypeName?: string;
   value: number;
-  alerttype: string;
   message: string;
-  severity: string;
+  severity: AlertSeverity; 
   timestamp: string;
-  isAcknowledged: boolean;
-  resolvedat: string;
+  isAcknowledged: boolean; 
 }
 
 export interface Report {
@@ -185,7 +182,7 @@ export interface Report {
   date: string;
   type: string;
   author: string;
-  farmId: number;
+  farmId: string; 
 }
 
 export interface HistoricalDataPoint {
@@ -242,7 +239,6 @@ export interface RegisterResult {
   user: User;
 }
 
-// Request DTOs
 export interface CreateFarmRequest {
   name: string;
   description: string;
@@ -252,11 +248,11 @@ export interface CreateFarmRequest {
     lon: number;
   };
   code: string;
-  ownerUserId: number;
+  ownerUserId: string; 
 }
 
 export interface UpdateFarmRequest {
-  id: number;
+  id: string; 
   name?: string;
   description?: string;
   location?: {
@@ -271,20 +267,20 @@ export interface CreateZoneRequest {
   name: string;
   area: number;
   soilType: string;
-  farmId: number;
+  farmId: string; 
 }
 
 export interface UpdateZoneRequest {
-  id: number;
+  id: string; 
   name?: string;
   area?: number;
   soilType?: string;
 }
 
 export interface ZoneCropRequest {
-  zoneId: number;
-  cropId: number;
-  currentStageId: number;
+  zoneId: string; 
+  cropId: string; 
+  currentStageId: string; 
   plantedAt: string;
   expectedHarvestAt: string;
   isActive: boolean;
@@ -293,14 +289,13 @@ export interface ZoneCropRequest {
 }
 
 export interface UpdateZoneCropRequest {
-  id: number;
-  zoneId?: number;
-  cropId?: number;
-  currentStageId?: number;
+  id: string; 
+  zoneId?: string; 
+  cropId?: string; 
+  currentStageId?: string; 
   plantedAt?: string;
   expectedHarvestAt?: string;
   isActive?: boolean;
   yieldWeightKg?: number;
   actualHarvestAt?: string;
 }
-

@@ -13,24 +13,27 @@ const ZoneForm: React.FC<ZoneFormProps> = ({ zone, onSave, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     area: 0,
-    soilType: soilTypes[0], // Default to the first option
+    soilType: soilTypes[0],
   });
 
   useEffect(() => {
-    if (zone) {
-      setFormData({
-        name: zone.name,
-        area: zone.area,
-        soilType: zone.soilType,
-      });
-    } else {
-      // Reset form for creating a new zone
-      setFormData({
-        name: '',
-        area: 0,
-        soilType: soilTypes[0],
-      });
-    }
+    const timer = setTimeout(() => {
+      if (zone) {
+        setFormData({
+          name: zone.name,
+          area: zone.area,
+          soilType: zone.soilType,
+        });
+      } else {
+        setFormData({
+          name: '',
+          area: 0,
+          soilType: soilTypes[0],
+        });
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [zone]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

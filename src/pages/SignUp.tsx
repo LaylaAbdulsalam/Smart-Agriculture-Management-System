@@ -1,16 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import { TFunction } from '../types';
 import { useAuth } from '../contexts/useAuth';    
 import DefaultUserIcon from '../components/DefaultUserIcon';
 
 interface SignUpProps {
-  onSwitchToLogin: () => void;
   t: TFunction;
 }
 
-const SignUp: React.FC<SignUpProps> = ({ onSwitchToLogin, t }) => {
+const SignUp: React.FC<SignUpProps> = ({ t }) => {
   const { register, verifyOtp, resendVerificationOtp } = useAuth(); 
+  const navigate = useNavigate(); // Hook for navigation
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -63,6 +64,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSwitchToLogin, t }) => {
       const otp = formData.get('otp') as string;
       
       await verifyOtp(userEmail, otp);
+      // On success, AuthProvider state changes will trigger App redirect to Dashboard
     } catch (error: any) {
       setError(error.message || 'OTP verification failed. Please check the code and try again.');
     } finally {
@@ -136,7 +138,11 @@ const SignUp: React.FC<SignUpProps> = ({ onSwitchToLogin, t }) => {
             </form>
             <p className="text-center text-sm text-text-light-secondary dark:text-dark-secondary">
               {t('signup.hasAccount')}{' '}
-              <button onClick={onSwitchToLogin} className="font-medium text-primary hover:text-primary-focus">
+              <button 
+                type="button" 
+                onClick={() => navigate('/login')} 
+                className="font-medium text-primary hover:text-primary-focus"
+              >
                 {t('signup.login')}
               </button>
             </p>
@@ -185,6 +191,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSwitchToLogin, t }) => {
               <p className="text-sm text-text-light-secondary dark:text-dark-secondary">
                 Didn't receive the code?{' '}
                 <button 
+                  type="button"
                   onClick={async () => {
                     setLoading(true);
                     setError('');

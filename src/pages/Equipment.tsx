@@ -57,6 +57,7 @@ const EquipmentPage: React.FC<EquipmentPageProps> = ({ t }) => {
       setIsFormModalOpen(false);
     } catch (error) {
       console.error("Error saving equipment:", error);
+      alert("Failed to save equipment. Check console for details.");
     }
   };
 
@@ -67,6 +68,7 @@ const EquipmentPage: React.FC<EquipmentPageProps> = ({ t }) => {
         setIsDeleteModalOpen(false);
       } catch (error) {
         console.error("Error deleting equipment:", error);
+        alert("Failed to delete equipment. Server might be rejecting the request (e.g. data dependencies).");
       }
     }
   };
@@ -116,29 +118,29 @@ const EquipmentPage: React.FC<EquipmentPageProps> = ({ t }) => {
           </thead>
           <tbody>
             {equipments.map((eq) => {
-                const zone = zones.find(z => z.id.toString() === eq.zoneid);
-                const readingType = readingTypes.find(rt => rt.id.toString() === eq.readingtypeid);
+                const zone = zones.find(z => z.id === eq.zoneId);
+                const readingType = readingTypes.find(rt => rt.id === eq.readingTypeId);
                 const lastReading = readings
-                    .filter(r => r.equipmentid.toString() === eq.id)
+                    .filter(r => r.equipmentId === eq.id)
                     .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-
-                const status = eq.isactive ? EquipmentStatus.Active : EquipmentStatus.Inactive;
 
                 return (
                   <tr key={eq.id} className="border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
                     <th scope="row" className="px-6 py-4 font-medium text-black dark:text-white whitespace-nowrap">
-                        <p>{eq.equipmentmodel}</p>
-                        <p className="text-xs font-normal text-text-light-secondary dark:text-dark-secondary">SN: {eq.serialnumber}</p>
+                        <p>{eq.model}</p>
+                        <p className="text-xs font-normal text-text-light-secondary dark:text-dark-secondary">SN: {eq.serialNumber}</p>
                     </th>
                     <td className="px-6 py-4">{zone?.name}</td>
-                    <td className="px-6 py-4">{readingType?.displayname}</td>
+                    
+                    <td className="px-6 py-4">{eq.readingTypeName || readingType?.displayName || '-'}</td>
+                    
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusClasses[status]}`}>
-                        {status}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusClasses[eq.status]}`}>
+                        {eq.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-semibold text-black dark:text-white">
-                        {lastReading ? `${lastReading.value.toFixed(1)} ${readingType?.unit}`: 'N/A'}
+                        {lastReading ? `${lastReading.value.toFixed(1)} ${readingType?.unit || ''}`: 'N/A'}
                     </td>
                     <td className="px-6 py-4 flex gap-2">
                         <button onClick={() => handleOpenEditModal(eq)} className="font-medium text-primary hover:underline">Edit</button>
