@@ -1,5 +1,5 @@
 import React from 'react';
-import { ZoneCrop, Crop, CropGrowthStage, ReadingType, TFunction } from '../types';
+import { ZoneCrop, Crop, CropGrowthStage, ReadingType, TFunction, CropSeason, CropStageRequirement } from '../types';
 
 interface GrowthStageWidgetProps {
   zoneCrop: ZoneCrop;
@@ -17,6 +17,11 @@ const RequirementItem: React.FC<{ name: string, range: string, unit: string }> =
 );
 
 const GrowthStageWidget: React.FC<GrowthStageWidgetProps> = ({ zoneCrop, crop, stage, readingTypes, t }) => {
+    // --- GUARDS ADDED HERE ---
+    const safeSeasons = crop.seasons || [];
+    const safeStages = stage.requirements || [];
+    const safeReadingTypes = readingTypes || [];
+
     const plantedDate = new Date(zoneCrop.plantedAt);
     const today = new Date();
     const daysSincePlanted = Math.floor((today.getTime() - plantedDate.getTime()) / (1000 * 3600 * 24));
@@ -25,10 +30,12 @@ const GrowthStageWidget: React.FC<GrowthStageWidgetProps> = ({ zoneCrop, crop, s
     let progressPercent = 0;
     
     const currentStageOrder = stage.order;
-    const season = crop.seasons.find(s => s.stages.some(st => st.id === stage.id));
+    
+    const season = safeSeasons.find((s: CropSeason) => (s.stages || []).some((st: CropGrowthStage) => st.id === stage.id));
+    
     const previousStagesDuration = season?.stages
-        .filter(s => s.order < currentStageOrder)
-        .reduce((acc, s) => acc + s.durationDays, 0) || 0;
+        .filter((s: CropGrowthStage) => s.order < currentStageOrder)
+        .reduce((acc: number, s: CropGrowthStage) => acc + s.durationDays, 0) || 0;
 
     daysInStage = daysSincePlanted - previousStagesDuration;
     if (daysInStage < 0) daysInStage = 0;
@@ -37,16 +44,16 @@ const GrowthStageWidget: React.FC<GrowthStageWidgetProps> = ({ zoneCrop, crop, s
         progressPercent = Math.min(100, (daysInStage / stage.durationDays) * 100);
     }
 
-    const nextStage = season?.stages.find(s => s.order === currentStageOrder + 1);
+    const nextStage = season?.stages.find((s: CropGrowthStage) => s.order === currentStageOrder + 1);
 
     return (
         <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg space-y-4">
-            <h3 className="font-bold text-lg">{crop.name} - {t('zoneCard.stage')}: {stage.name}</h3>
+            <h3 className="font-bold text-lg">{crop.name} - {t('zoneCard.stage', {defaultValue: 'Stage'})}: {stage.stagename}</h3>
             
             <div>
                 <div className="flex justify-between text-sm mb-1 text-text-light-secondary dark:text-dark-secondary">
                     <span>Day {daysInStage} of {stage.durationDays}</span>
-                    {nextStage && <span>Next: {nextStage.name}</span>}
+                    {nextStage && <span>Next: {nextStage.stagename}</span>}
                 </div>
                 <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
                     <div className="bg-primary h-2.5 rounded-full" style={{ width: `${progressPercent}%` }}></div>
@@ -56,8 +63,8 @@ const GrowthStageWidget: React.FC<GrowthStageWidgetProps> = ({ zoneCrop, crop, s
             <div>
                 <h4 className="font-semibold mb-2 text-black dark:text-white">Stage Requirements</h4>
                 <div className="space-y-1">
-                    {stage.requirements.map(req => {
-                        const readingType = readingTypes.find(rt => rt.id === req.readingTypeId);
+                    {safeStages.map((req: CropStageRequirement) => {
+                        const readingType = safeReadingTypes.find(rt => rt.code === req.readingTypeCode);
                         if (!readingType) return null;
                         return (
                             <RequirementItem 

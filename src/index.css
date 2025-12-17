@@ -11,8 +11,12 @@
   --color-primary-focus: #16a34a;
 }
 
-@layer base {
-  body {
-    @apply bg-bg-light dark:bg-bg-dark text-text-light dark:text-text-dark;
-  }
+body {
+  background-color: var(--color-bg-light);
+  color: var(--color-text-light);
+}
+
+html.dark body {
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-dark);
 }

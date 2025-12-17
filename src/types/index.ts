@@ -88,6 +88,7 @@ export interface CropSeason {
   seasonName: string; 
   plantingStartMonth: number; 
   expectedRangeDays: string; 
+  stages: CropGrowthStage[];
 }
 
 export interface Crop {
@@ -95,6 +96,7 @@ export interface Crop {
   name: string;
   growthStages?: CropGrowthStage[]; 
   seasons?: CropSeason[];
+  stages: CropGrowthStage[];
   // Optional fields for UI helpers
   optimalTemp?: { min: number, max: number };
   optimalHum?: { min: number, max: number };

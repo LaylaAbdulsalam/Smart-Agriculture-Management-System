@@ -44,6 +44,7 @@ export const API_ENDPOINTS = {
     LIST: '/api/zone-crops/list',
     CREATE: '/api/zone-crops/create',
     UPDATE: '/api/zone-crops/update',
+    DELETE: '/api/zone-crops/delete',
   },
   READINGS: {
     LIST: '/api/sensor-readings/list',

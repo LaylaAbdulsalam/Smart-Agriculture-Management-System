@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import ZoneForm from '../components/ZoneForm';
 import DeleteConfirmation from '../components/DeleteConfirmation';
 import ZoneDetailModal from '../components/ZoneDetailModal';
+import CropHistoryModal from '../components/CropHistoryModal';
 
 interface ZonesProps {
   t: TFunction;
@@ -31,7 +32,7 @@ const Zones: React.FC<ZonesProps> = ({ t }) => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedZone, setSelectedZone] = useState<ZoneType | null>(null);
 
   const handleOpenCreateModal = () => {
@@ -53,21 +54,25 @@ const Zones: React.FC<ZonesProps> = ({ t }) => {
     setSelectedZone(zone);
     setIsDetailModalOpen(true);
   };
+  
+  const handleOpenHistoryModal = (zone: ZoneType) => {
+    setSelectedZone(zone);
+    setIsHistoryModalOpen(true);
+  };
 
   const handleSaveZone = async (zoneData: Omit<ZoneType, 'id'|'farmId'>) => {
-  if (!selectedFarmId) return;
-  
-  try {
-    if (selectedZone) {
-      await updateZone(selectedZone.id, zoneData);
-    } else {
-      await addZone({ ...zoneData, farmId: selectedFarmId });
+    if (!selectedFarmId) return;
+    try {
+      if (selectedZone) {
+        await updateZone(selectedZone.id, zoneData);
+      } else {
+        await addZone({ ...zoneData, farmId: selectedFarmId });
+      }
+      setIsFormModalOpen(false);
+    } catch (error) {
+      console.error("Error saving zone:", error);
     }
-    setIsFormModalOpen(false);
-  } catch (error) {
-    console.error("Error saving zone:", error);
-  }
-};
+  };
 
   const handleDeleteConfirm = async () => {
     if (selectedZone) {
@@ -79,6 +84,14 @@ const Zones: React.FC<ZonesProps> = ({ t }) => {
       }
     }
   };
+
+  const safeZones = zones || [];
+  const safeZoneCrops = zoneCrops || [];
+  const safeEquipments = equipments || [];
+  const safeReadings = readings || [];
+  const safeAlerts = alerts || [];
+  const safeCropCatalog = cropCatalog || [];
+  const safeReadingTypes = readingTypes || [];
   
   return (
     <>
@@ -99,12 +112,21 @@ const Zones: React.FC<ZonesProps> = ({ t }) => {
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
           zone={selectedZone}
-          zoneCrops={zoneCrops}
-          crops={cropCatalog}
-          readingTypes={readingTypes}
+          zoneCrops={safeZoneCrops}
+          crops={safeCropCatalog}
+          readingTypes={safeReadingTypes}
           t={t}
           onAssignCrop={assignCropToZone}
           onUpdateZoneCrop={updateZoneCrop}
+        />
+      )}
+
+      {selectedZone && (
+        <CropHistoryModal
+          isOpen={isHistoryModalOpen}
+          onClose={() => setIsHistoryModalOpen(false)}
+          zone={selectedZone}
+          zoneCrops={safeZoneCrops}
         />
       )}
 
@@ -123,13 +145,13 @@ const Zones: React.FC<ZonesProps> = ({ t }) => {
           </button>
         </div>
 
-        {zones.length > 0 ? (
+        {safeZones.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {zones.map(zone => {
-                    const activeCrop = zoneCrops.find(zc => zc.zoneId === zone.id && zc.isActive);
-                    const zoneEquipments = equipments.filter(eq => eq.zoneId === zone.id);
-                    const zoneReadings = readings.filter(r => zoneEquipments.some(eq => eq.id === r.equipmentId));
-                    const zoneAlerts = alerts.filter(a => a.zoneId === zone.id && !a.isAcknowledged);
+                {safeZones.map(zone => {
+                    const activeCrop = safeZoneCrops.find(zc => zc.zoneId === zone.id && zc.isActive);
+                    const zoneEquipments = safeEquipments.filter(eq => eq && eq.zoneId === zone.id);
+                    const zoneReadings = safeReadings.filter(r => r && zoneEquipments.some(eq => eq && eq.id === r.equipmentId));
+                    const zoneAlerts = safeAlerts.filter(a => a && a.zoneId === zone.id && !a.isAcknowledged);
 
                     return (
                     <ZoneCard 
@@ -137,15 +159,16 @@ const Zones: React.FC<ZonesProps> = ({ t }) => {
                         zone={zone} 
                         activeCropDetails={activeCrop ? {
                             zoneCrop: activeCrop,
-                            crop: cropCatalog.find(c => c.id === activeCrop.cropId)
+                            crop: safeCropCatalog.find(c => c && activeCrop.cropId && c.id === activeCrop.cropId)
                         }: undefined}
                         readings={zoneReadings}
-                        readingTypes={readingTypes}
+                        readingTypes={safeReadingTypes}
                         alerts={zoneAlerts}
                         t={t}
                         onEdit={() => handleOpenEditModal(zone)}
                         onDelete={() => handleOpenDeleteModal(zone)}
                         onViewDetails={() => handleOpenDetailModal(zone)}
+                        onViewHistory={() => handleOpenHistoryModal(zone)}
                     />
                     )
                 })}

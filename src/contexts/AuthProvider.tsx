@@ -73,7 +73,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (fullname: string, email: string, password: string, phonenumber: string) => {
     try {
       setTempPassword(password);
-      await api.register({ fullName: fullname, email, password, phoneNumber: phonenumber });
+      await api.register({FullName: fullname, email, password, PhoneNumber: phonenumber });
     } catch (error: any) {
       setTempPassword(null);
       throw new Error(error.response?.data?.message || error.message || 'Registration error.');

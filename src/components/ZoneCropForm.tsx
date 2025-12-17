@@ -21,9 +21,6 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
             currentStageId: zoneCrop?.currentStageId?.toString() || '',
             plantedAt: zoneCrop?.plantedAt ? zoneCrop.plantedAt.split('T')[0] : new Date().toISOString().split('T')[0],
             expectedHarvestAt: zoneCrop?.expectedHarvestAt ? zoneCrop.expectedHarvestAt.split('T')[0] : '',
-            isActive: zoneCrop?.isActive ?? true,
-            yieldWeightKg: zoneCrop?.yieldWeightKg || 0,
-            actualHarvestAt: zoneCrop?.actualHarvestAt ? zoneCrop.actualHarvestAt.split('T')[0] : '',
         };
     });
     
@@ -36,17 +33,19 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
                 setIsLoadingDetails(true);
                 setDetailedCrop(null); 
                 try {
-                    const details = await api.getCropDetails(formData.cropId);
+                    const details = await api.getCropDetails(String(formData.cropId));
                     setDetailedCrop(details);
 
                     const seasons = details?.seasons || [];
-                    const stages = (details?.growthstages || []).sort((a, b) => a.order - b.order);
+                    const stages = (details?.growthStages || []).sort((a: any, b: any) => a.order - b.order);
 
-                    setFormData(prev => ({
-                        ...prev,
-                        seasonId: seasons.length > 0 ? seasons[0].id : '',
-                        currentStageId: stages.length > 0 ? stages[0].id : '',
-                    }));
+                    if (!zoneCrop || formData.cropId !== zoneCrop.cropId) {
+                        setFormData(prev => ({
+                            ...prev,
+                            seasonId: seasons.length > 0 ? String(seasons[0].id) : '',
+                            currentStageId: stages.length > 0 ? String(stages[0].id) : '',
+                        }));
+                    }
                 } catch (error) {
                     console.error("Could not fetch crop details:", error);
                 } finally {
@@ -55,20 +54,13 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
             }
         };
         fetchDetailsAndUpdateForm();
-    }, [formData.cropId]);
+    }, [formData.cropId, zoneCrop]);
 
     const seasons = useMemo(() => detailedCrop?.seasons || [], [detailedCrop]);
-    const stages = useMemo(() => (detailedCrop?.growthstages || []).sort((a, b) => a.order - b.order), [detailedCrop]);
+    const stages = useMemo(() => (detailedCrop?.growthStages || []).sort((a: any, b: any) => a.order - b.order), [detailedCrop]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value, type } = e.target;
-
-        if (type === 'checkbox') {
-            const { checked } = e.target as HTMLInputElement;
-            setFormData(prev => ({ ...prev, [name]: checked }));
-            return;
-        }
-        
+        const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
     
@@ -79,9 +71,7 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
 
         if (zoneCrop) {
             submissionData = {
-                id: zoneCrop.id,
                 cropgrowthstageid: formData.currentStageId,
-                isactive: formData.isActive,
             };
         } else {
             submissionData = {
@@ -89,7 +79,8 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
                 cropid: formData.cropId,
                 cropgrowthstageid: formData.currentStageId,
                 plantingdate: new Date(formData.plantedAt).toISOString().split('T')[0],
-                isactive: formData.isActive,
+                expectedharvestat: formData.expectedHarvestAt ? new Date(formData.expectedHarvestAt).toISOString().split('T')[0] : null,
+                isactive: true,
             };
         }
         onSave(submissionData);
@@ -100,26 +91,25 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
                     <label className="block text-sm font-medium mb-1">Crop</label>
-                    <select name="cropId" value={formData.cropId} onChange={handleChange} required className="w-full input">
+                    <select name="cropId" value={formData.cropId} onChange={handleChange} required className="w-full input" disabled={!!zoneCrop}>
                         {crops.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                 </div>
-                 {seasons.length > 0 && (
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Season</label>
-                        <select name="seasonId" value={formData.seasonId} onChange={handleChange} required className="w-full input" disabled={isLoadingDetails}>
-                            {isLoadingDetails && <option>Loading...</option>}
-                            {seasons.map(s => <option key={s.id} value={s.id}>{s.seasonname}</option>)}
-                        </select>
-                    </div>
-                 )}
+                 <div>
+                    <label className="block text-sm font-medium mb-1">Season</label>
+                    <select name="seasonId" value={formData.seasonId} onChange={handleChange} required className="w-full input" disabled={isLoadingDetails || seasons.length === 0}>
+                        {isLoadingDetails ? <option>Loading...</option> : 
+                         seasons.length === 0 ? <option>No seasons found</option> :
+                         seasons.map((s: any) => <option key={s.id} value={s.id}>{s.seasonname || s.name}</option>)}
+                    </select>
+                </div>
             </div>
             <div>
                 <label className="block text-sm font-medium mb-1">Starting Stage</label>
-                <select name="currentStageId" value={formData.currentStageId} onChange={handleChange} required className="w-full input" disabled={isLoadingDetails || !stages.length}>
-                     {isLoadingDetails && <option>Loading...</option>}
-                     {!isLoadingDetails && stages.length === 0 && <option>No stages found</option>}
-                     {stages.map(s => <option key={s.id} value={s.id}>{s.stagename}</option>)}
+                <select name="currentStageId" value={formData.currentStageId} onChange={handleChange} required className="w-full input" disabled={isLoadingDetails || stages.length === 0}>
+                     {isLoadingDetails ? <option>Loading stages...</option> :
+                      stages.length === 0 ? <option>No stages found</option> :
+                      stages.map((s: any) => <option key={s.id} value={s.id}>{s.stagename || s.name}</option>)}
                 </select>
             </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -132,28 +122,8 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
                     <input type="date" name="expectedHarvestAt" value={formData.expectedHarvestAt} onChange={handleChange} className="w-full input" />
                 </div>
             </div>
-            <div className="border-t border-border-light dark:border-border-dark pt-4">
-                 <div className="flex items-center justify-between">
-                    <label htmlFor="isActive" className="font-medium text-black dark:text-white">Is Active Crop?</label>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="isActive" name="isActive" className="sr-only peer" checked={formData.isActive} onChange={handleChange}/>
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                </div>
-            </div>
-            {!formData.isActive && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border-light dark:border-border-dark">
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Actual Harvest Date</label>
-                        <input type="date" name="actualHarvestAt" value={formData.actualHarvestAt} onChange={handleChange} className="w-full input" />
-                    </div>
-                     <div>
-                        <label className="block text-sm font-medium mb-1">Yield (kg)</label>
-                        <input type="number" name="yieldWeightKg" value={formData.yieldWeightKg} onChange={handleChange} className="w-full input" />
-                    </div>
-                </div>
-            )}
-            <div className="flex justify-end gap-4 pt-4">
+            
+            <div className="flex justify-end gap-4 pt-4 border-t border-border-light dark:border-border-dark mt-6">
                 <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
                 <button type="submit" className="btn-primary">Save Crop</button>
             </div>

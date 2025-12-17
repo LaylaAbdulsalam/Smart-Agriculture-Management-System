@@ -13,16 +13,16 @@ export interface FarmContextType {
   alerts: Alert[];
   cropCatalog: Crop[];
   readingTypes: ReadingType[];
-  
   setSelectedFarmId: (id: string | null) => void;
-  addFarm: (farmData: Omit<Farm, 'id' | 'ownerUserId'>) => Promise<void>;
+  addFarm: (farmData: Omit<Farm, 'id' | 'ownerUserId' | 'description'>) => Promise<void>;
   updateFarm: (farmId: string, farmData: Partial<Farm>) => Promise<void>;
   deleteFarm: (farmId: string) => Promise<void>;
   addZone: (zoneData: Omit<Zone, 'id'>) => Promise<void>;
   updateZone: (zoneId: string, zoneData: Partial<Zone>) => Promise<void>;
   deleteZone: (zoneId: string) => Promise<void>;
   assignCropToZone: (zoneCropData: Omit<ZoneCrop, 'id'>) => Promise<ZoneCrop>;
-  updateZoneCrop: (zoneCropId: string, updates: Partial<ZoneCrop>) => Promise<ZoneCrop>;
+  updateZoneCrop: (zoneCropId: number, updates: Partial<ZoneCrop>) => Promise<ZoneCrop>;
+  deleteZoneCrop: (zoneCropId: string) => Promise<void>; 
   addEquipment: (equipmentData: any) => Promise<void>;
   updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>) => Promise<void>;
   deleteEquipment: (equipmentId: string) => Promise<void>;
@@ -58,9 +58,29 @@ export const FarmProvider: React.FC<FarmProviderProps> = ({ children, userId }) 
   const [readingTypes, setReadingTypes] = useState<ReadingType[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const refetchFarmData = useCallback(async (farmId: string) => {
+    setLoading(true);
+    try {
+      const [farmZones, farmZoneCrops, farmEquipment, farmAlerts] = await Promise.all([
+        api.getZonesByFarm(farmId),
+        api.getZoneCropsByFarm(farmId),
+        api.getEquipmentByFarm(farmId),
+        api.getAlertsByFarm(farmId)
+      ]);
+      setZones(farmZones);
+      setZoneCrops(farmZoneCrops);
+      setEquipments(farmEquipment);
+      setAlerts(farmAlerts);
+    } catch (error) {
+      console.error('Failed to refetch farm data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const loadInitialData = async () => {
-      setLoading(true);
+      // setLoading(true) is removed here to avoid double loading indicators
       try {
         const [crops, types] = await Promise.all([
           api.getCropCatalog(),
@@ -70,8 +90,6 @@ export const FarmProvider: React.FC<FarmProviderProps> = ({ children, userId }) 
         setReadingTypes(types);
       } catch (error) {
         console.error('Failed to load initial data:', error);
-      } finally {
-        setLoading(false);
       }
     };
     loadInitialData();
@@ -107,47 +125,49 @@ export const FarmProvider: React.FC<FarmProviderProps> = ({ children, userId }) 
   }, [farms, selectedFarmId]);
 
   useEffect(() => {
-    const loadFarmData = async () => {
-      if (selectedFarmId) {
-        setLoading(true);
-        setReadings([]); 
-        try {
-          const [farmZones, farmZoneCrops, farmEquipment, farmAlerts] = await Promise.all([
-            api.getZonesByFarm(selectedFarmId),
-            api.getZoneCropsByFarm(selectedFarmId),
-            api.getEquipmentByFarm(selectedFarmId),
-            api.getAlertsByFarm(selectedFarmId)
-          ]);
-          
-          setZones(farmZones);
-          setZoneCrops(farmZoneCrops);
-          setEquipments(farmEquipment);
-          setAlerts(farmAlerts);
+    if (selectedFarmId) {
+      refetchFarmData(selectedFarmId);
+    } else {
+      setZones([]);
+      setZoneCrops([]);
+      setEquipments([]);
+      setAlerts([]);
+      setReadings([]);
+    }
+  }, [selectedFarmId, refetchFarmData]);
 
-          if (farmEquipment.length > 0) {
-            const readingPromises = farmEquipment.map(eq => api.getReadingsByEquipment(eq.id));
-            const readingsArrays = await Promise.all(readingPromises);
-            const allReadings = readingsArrays.flat();
-            setReadings(allReadings);
-          }
+  const simulateData = useCallback(() => {
+    if (equipments.length === 0) return;
+    setReadings(prevReadings => {
+      const newReadings: SensorReading[] = [];
+      equipments.forEach(eq => {
+        if (eq.status !== 'Active') return;
+        const lastReading = prevReadings.filter(r => r.equipmentId === eq.id).pop();
+        let baseValue = lastReading ? lastReading.value : 50;
+        baseValue += (Math.random() - 0.5) * 2;
+        const newReading: SensorReading = {
+          id: `${eq.id}-${Date.now()}`,
+          equipmentId: eq.id,
+          value: parseFloat(baseValue.toFixed(1)),
+          timestamp: new Date().toISOString(),
+          readingType: eq.readingTypeId
+        };
+        newReadings.push(newReading);
+      });
+      return [...prevReadings, ...newReadings].slice(-200);
+    });
+  }, [equipments]);
 
-        } catch (error) {
-          console.error('Failed to load farm data:', error);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setZones([]);
-        setZoneCrops([]);
-        setEquipments([]);
-        setAlerts([]);
-        setReadings([]);
-      }
-    };
-    loadFarmData();
-  }, [selectedFarmId]);
+  useEffect(() => {
+    if (selectedFarmId) {
+      const interval = setInterval(() => {
+        simulateData();
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedFarmId, simulateData]);
 
-  const addFarm = useCallback(async (farmData: Omit<Farm, 'id' | 'ownerUserId'>) => {
+  const addFarm = useCallback(async (farmData: Omit<Farm, 'id' | 'ownerUserId' | 'description'>) => {
     if (!userId) throw new Error('User not logged in');
     const newFarm = await api.createFarm({ ...farmData, ownerUserId: userId });
     setFarms(prev => [...prev, newFarm]);
@@ -171,90 +191,76 @@ export const FarmProvider: React.FC<FarmProviderProps> = ({ children, userId }) 
   }, [selectedFarmId]);
 
   const addZone = useCallback(async (zoneData: Omit<Zone, 'id'>) => {
-    if (!zoneData.farmId) throw new Error('Farm ID is missing');
-    const newZone = await api.createZone(zoneData);
-    setZones(prev => [...prev, newZone]);
-  }, []);
+    if (!selectedFarmId) throw new Error('Farm ID is missing');
+    await api.createZone(zoneData);
+    await refetchFarmData(selectedFarmId);
+  }, [selectedFarmId, refetchFarmData]);
 
   const updateZone = useCallback(async (zoneId: string, zoneData: Partial<Zone>) => {
-    const updatedZone = await api.updateZone(zoneId, zoneData);
-    setZones(prev => prev.map(z => z.id === zoneId ? updatedZone : z));
-  }, []);
+    if (!selectedFarmId) return;
+    await api.updateZone(zoneId, zoneData);
+    await refetchFarmData(selectedFarmId);
+  }, [selectedFarmId, refetchFarmData]);
 
   const deleteZone = useCallback(async (zoneId: string) => {
+    if (!selectedFarmId) return;
     await api.deleteZone(zoneId);
-    setZones(prev => prev.filter(z => z.id !== zoneId));
-  }, []);
+    await refetchFarmData(selectedFarmId);
+  }, [selectedFarmId, refetchFarmData]);
 
   const assignCropToZone = useCallback(async (zoneCropData: Omit<ZoneCrop, 'id'>): Promise<ZoneCrop> => {
+    if (!selectedFarmId) throw new Error("No selected farm");
     const newZoneCrop = await api.assignCropToZone(zoneCropData);
-    setZoneCrops(prev => [...prev.filter(zc => zc.zoneId !== newZoneCrop.zoneId), newZoneCrop]);
+    await refetchFarmData(selectedFarmId);
     return newZoneCrop;
-  }, []);
+  }, [selectedFarmId, refetchFarmData]);
 
-  const updateZoneCrop = useCallback(async (zoneCropId: string, updates: Partial<ZoneCrop>): Promise<ZoneCrop> => {
+  const updateZoneCrop = useCallback(async (zoneCropId: number, updates: Partial<ZoneCrop>): Promise<ZoneCrop> => {
+    if (!selectedFarmId) throw new Error("No selected farm");
     const updatedZoneCrop = await api.updateZoneCrop(zoneCropId, updates);
-    setZoneCrops(prev => prev.map(zc => zc.id === updatedZoneCrop.id ? updatedZoneCrop : zc));
+    await refetchFarmData(selectedFarmId);
     return updatedZoneCrop;
-  }, []);
+  }, [selectedFarmId, refetchFarmData]);
+  
+  const deleteZoneCrop = useCallback(async (zoneCropId: string) => {
+    if (!selectedFarmId) return;
+    await api.deleteZoneCrop(zoneCropId);
+    await refetchFarmData(selectedFarmId);
+  }, [selectedFarmId, refetchFarmData]);
 
   const addEquipment = useCallback(async (equipmentData: any) => {
-    try {
-      const newEquipmentFromApi = await api.createEquipment(equipmentData);
-      setEquipments(prev => [...prev, newEquipmentFromApi]);
-    } catch (error) {
-      console.error('Failed to add equipment:', error);
-      throw error;
-    }
-  }, []);
+    if (!selectedFarmId) return;
+    await api.createEquipment(equipmentData);
+    await refetchFarmData(selectedFarmId);
+  }, [selectedFarmId, refetchFarmData]);
 
   const updateEquipment = useCallback(async (equipmentId: string, equipmentData: Partial<Equipment>) => {
-    const updatedEquipment = await api.updateEquipment(equipmentId, equipmentData);
-    setEquipments(prev => prev.map(e => e.id === equipmentId ? updatedEquipment : e));
-  }, []);
+    if (!selectedFarmId) return;
+    await api.updateEquipment(equipmentId, equipmentData);
+    await refetchFarmData(selectedFarmId);
+  }, [selectedFarmId, refetchFarmData]);
 
   const deleteEquipment = useCallback(async (equipmentId: string) => {
+    if (!selectedFarmId) return;
     await api.deleteEquipment(equipmentId);
-    setEquipments(prev => prev.filter(e => e.id !== equipmentId));
-  }, []);
+    await refetchFarmData(selectedFarmId);
+  }, [selectedFarmId, refetchFarmData]);
 
   const acknowledgeAlert = useCallback(async (alertId: string) => {
-    const updatedAlert = await api.acknowledgeAlert(alertId);
-    setAlerts(prev => prev.map(a => a.id === alertId ? updatedAlert : a));
-  }, []);
-
-  const simulateData = useCallback(() => {
-  }, []);
+    if (!selectedFarmId) return;
+    await api.acknowledgeAlert(alertId);
+    await refetchFarmData(selectedFarmId);
+  }, [selectedFarmId, refetchFarmData]);
 
   const contextValue = useMemo(() => ({
-    farms,
-    selectedFarmId,
-    zones,
-    zoneCrops,
-    equipments,
-    readings,
-    alerts,
-    cropCatalog,
-    readingTypes,
-    setSelectedFarmId,
-    addFarm,
-    updateFarm,
-    deleteFarm,
-    addZone,
-    updateZone,
-    deleteZone,
-    assignCropToZone,
-    updateZoneCrop,
-    addEquipment,
-    updateEquipment,
-    deleteEquipment,
-    acknowledgeAlert,
-    simulateData,
-    loading,
+    farms, selectedFarmId, zones, zoneCrops, equipments, readings, alerts,
+    cropCatalog, readingTypes, setSelectedFarmId, addFarm, updateFarm, deleteFarm,
+    addZone, updateZone, deleteZone, assignCropToZone, updateZoneCrop, deleteZoneCrop,
+    addEquipment, updateEquipment, deleteEquipment, acknowledgeAlert, simulateData, loading,
   }), [
     farms, selectedFarmId, zones, zoneCrops, equipments, readings, alerts,
     cropCatalog, readingTypes, loading, addFarm, updateFarm, deleteFarm,
-    addZone, updateZone, deleteZone, assignCropToZone, updateZoneCrop,
+    addZone, updateZone, deleteZone, assignCropToZone, updateZoneCrop, deleteZoneCrop,
     addEquipment, updateEquipment, deleteEquipment, acknowledgeAlert, simulateData
   ]);
 

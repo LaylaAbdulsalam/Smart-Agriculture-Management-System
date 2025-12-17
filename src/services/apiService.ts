@@ -17,6 +17,7 @@ export interface RegisterRequest { FullName: string; email: string; password: st
 export interface OtpVerificationRequest { email: string; otp: string; }
 export interface AuthResponse { auth: { token: string }; user: User; }
 
+
 // --- Mappers ---
 const mapFarm = (dto: FarmDto): Farm | null => {
   if (!dto.id) { return null; }
@@ -145,7 +146,16 @@ export const createFarm = async (farmData: any): Promise<Farm> => {
 };
 
 export const updateFarm = async (id: string, farmData: any): Promise<Farm> => {
-  const payload = { ...farmData, id: id };
+  // CORRECTED: Flatten the location object to match what the backend expects.
+  const payload = {
+    name: farmData.name,
+    description: farmData.description,
+    code: farmData.code,
+    address: farmData.location.address,
+    lat: farmData.location.lat,
+    lon: farmData.location.lon,
+  };
+
   const response = await httpClient.put<FarmDto>(`${API_ENDPOINTS.FARMS.UPDATE}?id=${id}`, payload);
   const mappedFarm = mapFarm(response);
   if (!mappedFarm) throw new Error("Update farm failed: Invalid data from server");
@@ -341,6 +351,10 @@ export const updateZoneCrop = async (id: number, updates: any): Promise<ZoneCrop
     };
 };
 
+export const deleteZoneCrop = async (id: string): Promise<void> => {
+  return httpClient.delete(`${API_ENDPOINTS.ZONE_CROPS.DELETE}?id=${id}`);
+};
+
 export const getCropDetails = async (cropId: string): Promise<Crop | null> => {
   try {
     const response = await httpClient.get<any>(`${API_ENDPOINTS.CROPS.GET_CROP}?id=${cropId}`);
@@ -354,6 +368,7 @@ export const getCropDetails = async (cropId: string): Promise<Crop | null> => {
     return null;
   }
 };
+
 
 export const getReadingTypes = async (): Promise<ReadingType[]> => {
   try {
@@ -414,3 +429,7 @@ export function findRequirements(stage: any, readingTypeId: number) {
   if (!stage || !stage.requirements) return null;
   return stage.requirements.find((r: any) => r.readingTypeId === readingTypeId) || null;
 }
+
+
+
+

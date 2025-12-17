@@ -59,7 +59,9 @@ const FarmsPage: React.FC<FarmsPageProps> = ({ t }) => {
     <>
       <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} 
              title={selectedFarm ? "Edit Farm" : "Create New Farm"}>
-        <FarmForm farm={selectedFarm} onSave={handleSaveFarm} onClose={() => setIsFormModalOpen(false)} />
+        {/* We add a `key` here. When `selectedFarm` changes, React will destroy the old
+            FarmForm and create a new one, ensuring the state is always fresh. */}
+        <FarmForm key={selectedFarm?.id || 'new'} farm={selectedFarm} onSave={handleSaveFarm} onClose={() => setIsFormModalOpen(false)} />
       </Modal>
       
       <DeleteConfirmation
@@ -92,15 +94,21 @@ const FarmsPage: React.FC<FarmsPageProps> = ({ t }) => {
               <div key={farm.id} className="bg-card-light dark:bg-card-dark p-5 rounded-xl shadow-md flex flex-col justify-between border border-border-light dark:border-border-dark">
                 <div>
                   <h3 className="text-lg font-bold text-black dark:text-white">{farm.name}</h3>
-                  <p className="text-sm text-text-light-secondary dark:text-dark-secondary mt-1 h-10">
+                  <p className="text-sm text-text-light-secondary dark:text-dark-secondary mt-1 h-10 overflow-hidden">
                     {farm.description}
                   </p>
                   <div className="mt-4 space-y-2 text-sm">
-                    <p className="flex items-center">
-                      <span>📍</span> {farm.location.address}
+                    <p className="flex items-center gap-2">
+                      <span>📍</span> 
+                      <span>{farm.location.address}</span>
                     </p>
-                    <p className="flex items-center">
-                      <span>🔢</span> {farm.code}
+                    <p className="flex items-center gap-2">
+                      <span>🌍</span>
+                      <span>Lat: {farm.location.lat.toFixed(4)}, Lon: {farm.location.lon.toFixed(4)}</span>
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span>🔢</span>
+                      <span>{farm.code}</span>
                     </p>
                   </div>
                 </div>

@@ -1,34 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Farm } from '../types';
 
 interface FarmFormProps {
   farm?: Farm | null;
-  onSave: (farm: Omit<Farm, 'id' | 'ownerUserId'>) => void;
+  onSave: (farm: Omit<Farm, 'id' | 'ownerUserId' | 'description'>) => void;
   onClose: () => void;
 }
 
 const FarmForm: React.FC<FarmFormProps> = ({ farm, onSave, onClose }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    address: '',
-    lat: 0,
-    lon: 0,
-    code: '',
+    name: farm?.name || '',
+    address: farm?.location?.address || '',
+    lat: farm?.location?.lat || 0,
+    lon: farm?.location?.lon || 0,
+    code: farm?.code || '',
   });
-
-  useEffect(() => {
-    if (farm) {
-      setFormData({
-        name: farm.name,
-        description: farm.description,
-        address: farm.location.address,
-        lat: farm.location.lat,
-        lon: farm.location.lon,
-        code: farm.code,
-      });
-    }
-  }, [farm]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -39,7 +25,6 @@ const FarmForm: React.FC<FarmFormProps> = ({ farm, onSave, onClose }) => {
     e.preventDefault();
     onSave({
         name: formData.name,
-        description: formData.description,
         location: {
             address: formData.address,
             lat: Number(formData.lat),
@@ -55,10 +40,7 @@ const FarmForm: React.FC<FarmFormProps> = ({ farm, onSave, onClose }) => {
         <label className="block text-sm font-medium mb-1">Farm Name</label>
         <input type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full px-3 py-2 bg-background-light dark:bg-slate-700 border border-border-light dark:border-border-dark rounded-md" />
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Description</label>
-        <textarea name="description" value={formData.description} onChange={handleChange} rows={3} className="w-full px-3 py-2 bg-background-light dark:bg-slate-700 border border-border-light dark:border-border-dark rounded-md"></textarea>
-      </div>
+      
        <div>
         <label className="block text-sm font-medium mb-1">Address</label>
         <input type="text" name="address" value={formData.address} onChange={handleChange} required className="w-full px-3 py-2 bg-background-light dark:bg-slate-700 border border-border-light dark:border-border-dark rounded-md" />
@@ -66,11 +48,11 @@ const FarmForm: React.FC<FarmFormProps> = ({ farm, onSave, onClose }) => {
        <div className="grid grid-cols-2 gap-4">
         <div>
             <label className="block text-sm font-medium mb-1">Latitude</label>
-            <input type="number" name="lat" value={formData.lat} onChange={handleChange} required className="w-full px-3 py-2 bg-background-light dark:bg-slate-700 border border-border-light dark:border-border-dark rounded-md" />
+            <input type="number" step="any" name="lat" value={formData.lat} onChange={handleChange} required className="w-full px-3 py-2 bg-background-light dark:bg-slate-700 border border-border-light dark:border-border-dark rounded-md" />
         </div>
         <div>
             <label className="block text-sm font-medium mb-1">Longitude</label>
-            <input type="number" name="lon" value={formData.lon} onChange={handleChange} required className="w-full px-3 py-2 bg-background-light dark:bg-slate-700 border border-border-light dark:border-border-dark rounded-md" />
+            <input type="number" step="any" name="lon" value={formData.lon} onChange={handleChange} required className="w-full px-3 py-2 bg-background-light dark:bg-slate-700 border border-border-light dark:border-border-dark rounded-md" />
         </div>
       </div>
       <div>
