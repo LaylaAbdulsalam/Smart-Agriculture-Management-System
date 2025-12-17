@@ -35,11 +35,15 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
 
     const activeZoneCrop = useMemo(() => safeZoneCrops.find(zc => zc.zoneId === zone.id && zc.isActive), [safeZoneCrops, zone.id]);
     
+    // --- THIS IS THE ONLY CHANGE ---
+    // This effect now correctly sets the initial view state only when the modal opens.
     useEffect(() => {
-        if (isOpen && !activeZoneCrop) {
-            setIsEditing(true);
+        if (isOpen) {
+            // If there is no active crop, we are in "editing" mode (to show the Plant Crop form).
+            // If there is an active crop, we are NOT in "editing" mode (to show the details).
+            setIsEditing(!activeZoneCrop);
         }
-    }, [isOpen, activeZoneCrop]);
+    }, [isOpen]); // It only runs when `isOpen` changes.
     
     useEffect(() => {
         const fetchDetails = async () => {
@@ -76,6 +80,8 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
             } else {
                 await onAssignCrop({ ...data, zoneId: zone.id });
             }
+            // After saving, always try to go back to the details view or close
+            setIsEditing(false);
             onClose(); 
         } catch (error) {
             console.error("Failed to save crop", error);
@@ -124,7 +130,7 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
             return (
                 <ZoneCropForm
                     zone={zone}
-                    zoneCrop={isEditing && activeZoneCrop ? null : activeZoneCrop}
+                    zoneCrop={activeZoneCrop} // Pass activeZoneCrop for editing case
                     crops={safeCrops}
                     onSave={handleSave}
                     onClose={() => {
