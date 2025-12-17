@@ -21,7 +21,7 @@ export interface FarmContextType {
   updateZone: (zoneId: string, zoneData: Partial<Zone>) => Promise<void>;
   deleteZone: (zoneId: string) => Promise<void>;
   assignCropToZone: (zoneCropData: Omit<ZoneCrop, 'id'>) => Promise<ZoneCrop>;
-  updateZoneCrop: (zoneCropId: number, updates: Partial<ZoneCrop>) => Promise<ZoneCrop>;
+  updateZoneCrop: (zoneCropId: string, updates: Partial<ZoneCrop>) => Promise<ZoneCrop>;
   deleteZoneCrop: (zoneCropId: string) => Promise<void>; 
   addEquipment: (equipmentData: any) => Promise<void>;
   updateEquipment: (equipmentId: string, equipmentData: Partial<Equipment>) => Promise<void>;
@@ -80,7 +80,6 @@ export const FarmProvider: React.FC<FarmProviderProps> = ({ children, userId }) 
 
   useEffect(() => {
     const loadInitialData = async () => {
-      // setLoading(true) is removed here to avoid double loading indicators
       try {
         const [crops, types] = await Promise.all([
           api.getCropCatalog(),
@@ -215,7 +214,7 @@ export const FarmProvider: React.FC<FarmProviderProps> = ({ children, userId }) 
     return newZoneCrop;
   }, [selectedFarmId, refetchFarmData]);
 
-  const updateZoneCrop = useCallback(async (zoneCropId: number, updates: Partial<ZoneCrop>): Promise<ZoneCrop> => {
+  const updateZoneCrop = useCallback(async (zoneCropId: string, updates: Partial<ZoneCrop>): Promise<ZoneCrop> => {
     if (!selectedFarmId) throw new Error("No selected farm");
     const updatedZoneCrop = await api.updateZoneCrop(zoneCropId, updates);
     await refetchFarmData(selectedFarmId);
@@ -270,6 +269,3 @@ export const FarmProvider: React.FC<FarmProviderProps> = ({ children, userId }) 
     </FarmContext.Provider>
   );
 };
-
-
-

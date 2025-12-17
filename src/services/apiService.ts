@@ -146,7 +146,6 @@ export const createFarm = async (farmData: any): Promise<Farm> => {
 };
 
 export const updateFarm = async (id: string, farmData: any): Promise<Farm> => {
-  // CORRECTED: Flatten the location object to match what the backend expects.
   const payload = {
     name: farmData.name,
     description: farmData.description,
@@ -326,25 +325,27 @@ export const assignCropToZone = async (data: any): Promise<any> => {
         zoneid: data.zoneid,
         cropid: data.cropid,
         cropgrowthstageid: data.cropgrowthstageid,
-        plantingdate: new Date(data.plantingdate).toISOString().split('T')[0],
+        plantingdate: data.plantingdate,
+        expectedharvestat: data.expectedharvestat,
         isactive: data.isactive,
     };
     return httpClient.post(API_ENDPOINTS.ZONE_CROPS.CREATE, payload);
 };
 
-export const updateZoneCrop = async (id: number, updates: any): Promise<ZoneCrop> => {
+export const updateZoneCrop = async (id: string, updates: any): Promise<ZoneCrop> => {
     const payload = { 
         cropgrowthstageid: updates.cropgrowthstageid, 
-        isactive: updates.isactive 
+        isactive: updates.isactive,
+        actualharvestat: updates.actualHarvestAt
     };
     const response = await httpClient.put<any>(`${API_ENDPOINTS.ZONE_CROPS.UPDATE}?id=${id}`, payload);
-    
     return {
         id: response.id,
         zoneId: response.zoneid,
         cropId: response.cropid,
         isActive: response.isactive,
         plantedAt: response.plantingdate,
+        expectedHarvestAt: response.expectedharvestat,
         currentStageId: response.cropgrowthstageid,
         cropName: response.cropname,
         stageName: response.stagename
@@ -368,7 +369,6 @@ export const getCropDetails = async (cropId: string): Promise<Crop | null> => {
     return null;
   }
 };
-
 
 export const getReadingTypes = async (): Promise<ReadingType[]> => {
   try {
@@ -398,7 +398,6 @@ export const getReportsByFarm = async (farmId: string): Promise<any[]> => {
         { id: 'RPT-002', date: new Date(Date.now() - 86400000 * 2).toISOString(), type: 'Soil Health Analysis', author: 'Dr. Ahmed (Consultant)' },
     ];
 };
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const generateReport = async (farmId: string): Promise<any> => {
     await new Promise(resolve => setTimeout(resolve, 1000));

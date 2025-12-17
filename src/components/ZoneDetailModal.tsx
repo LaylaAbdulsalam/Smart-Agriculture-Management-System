@@ -17,9 +17,7 @@ interface ZoneDetailModalProps {
   readingTypes: ReadingType[];
   t: TFunction;
   onAssignCrop: (zoneCropData: Omit<ZoneCrop, 'id'>) => Promise<any>;
-  // --- THIS IS THE FIX ---
-  // The prop now correctly expects a function that accepts a 'number'.
-  onUpdateZoneCrop: (zoneCropId: number, updates: Partial<ZoneCrop>) => Promise<any>;
+  onUpdateZoneCrop: (zoneCropId: string, updates: Partial<ZoneCrop>) => Promise<any>;
 }
 
 const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone, zoneCrops, crops, readingTypes, t, onAssignCrop, onUpdateZoneCrop }) => {
@@ -47,6 +45,7 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
         const fetchDetails = async () => {
             if (activeZoneCrop) {
                 setIsLoadingDetails(true);
+                setDetailedCrop(null);
                 try {
                     const details = await api.getCropDetails(activeZoneCrop.cropId);
                     setDetailedCrop(details);
@@ -73,7 +72,7 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
     const handleSave = async (data: any) => {
         try {
             if (activeZoneCrop) {
-                await onUpdateZoneCrop(Number(activeZoneCrop.id), data);
+                await onUpdateZoneCrop(activeZoneCrop.id, data);
             } else {
                 await onAssignCrop({ ...data, zoneId: zone.id });
             }
@@ -97,7 +96,7 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
 
     const handleDeactivateConfirm = () => {
         if (activeZoneCrop) {
-            onUpdateZoneCrop(Number(activeZoneCrop.id), { isActive: false, actualHarvestAt: new Date().toISOString() })
+            onUpdateZoneCrop(activeZoneCrop.id, { isActive: false, actualHarvestAt: new Date().toISOString() })
             .then(() => {
                 setIsDeactivateConfirmOpen(false);
                 setIsEditing(true);
@@ -109,8 +108,8 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
     };
 
     const getModalTitle = () => {
-        if (isEditing) {
-            return `Plant Crop in ${zone.name}`;
+        if (isEditing || !activeZoneCrop) {
+            return activeZoneCrop ? `Update Crop in ${zone.name}` : `Plant Crop in ${zone.name}`;
         }
         return `Current Crop in ${zone.name}`;
     }
@@ -120,57 +119,68 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
         onClose();
     }
 
+    const renderContent = () => {
+        if (isEditing || !activeZoneCrop) {
+            return (
+                <ZoneCropForm
+                    zone={zone}
+                    zoneCrop={isEditing && activeZoneCrop ? null : activeZoneCrop}
+                    crops={safeCrops}
+                    onSave={handleSave}
+                    onClose={() => {
+                        if (activeZoneCrop) { setIsEditing(false); } 
+                        else { onClose(); }
+                    }}
+                />
+            );
+        }
+
+        if (isLoadingDetails) {
+            return (
+                <div className="text-center p-8">
+                    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-primary"></div>
+                    <p className="mt-4 text-sm text-slate-500">Loading crop details...</p>
+                </div>
+            );
+        }
+
+        if (activeZoneCrop && detailedCrop && activeStage) {
+            return (
+                <>
+                    <GrowthStageWidget 
+                        zoneCrop={activeZoneCrop}
+                        crop={detailedCrop}
+                        stage={activeStage}
+                        readingTypes={safeReadingTypes}
+                        t={t}
+                    />
+                    <div className="flex justify-between items-center pt-4 border-t border-border-light dark:border-border-dark">
+                        <div className="flex gap-2">
+                            <button onClick={() => setIsDeactivateConfirmOpen(true)} className="btn-secondary">Deactivate & Plant New</button>
+                            <button onClick={() => setIsDeleteConfirmOpen(true)} className="btn-danger">Delete</button>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={handleClose} className="btn-secondary">Close</button>
+                            <button onClick={() => setIsEditing(true)} className="btn-primary">Update</button>
+                        </div>
+                    </div>
+                </>
+            );
+        }
+
+        return (
+            <div className="text-center p-8">
+                <p className="text-red-500">Failed to load crop details. Please try again.</p>
+            </div>
+        );
+    };
+
     return (
         <>
             <Modal isOpen={isOpen} onClose={handleClose} title={getModalTitle()}>
-                {isEditing || !activeZoneCrop ? (
-                    <ZoneCropForm
-                        zone={zone}
-                        zoneCrop={isEditing && activeZoneCrop ? null : activeZoneCrop}
-                        crops={safeCrops}
-                        onSave={handleSave}
-                        onClose={() => {
-                            if (activeZoneCrop) {
-                                setIsEditing(false);
-                            } else {
-                                onClose();
-                            }
-                        }}
-                    />
-                ) : (
-                    <div className="space-y-6">
-                        {isLoadingDetails ? (
-                            <div className="text-center p-8">
-                                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-primary"></div>
-                                <p className="mt-4 text-sm text-slate-500">Loading crop details...</p>
-                            </div>
-                        ) : activeZoneCrop && detailedCrop && activeStage ? (
-                            <>
-                                <GrowthStageWidget 
-                                    zoneCrop={activeZoneCrop}
-                                    crop={detailedCrop}
-                                    stage={activeStage}
-                                    readingTypes={safeReadingTypes}
-                                    t={t}
-                                />
-                                <div className="flex justify-between items-center pt-4 border-t border-border-light dark:border-border-dark">
-                                    <div className="flex gap-2">
-                                        <button onClick={() => setIsDeactivateConfirmOpen(true)} className="btn-secondary">Deactivate & Plant New</button>
-                                        <button onClick={() => setIsDeleteConfirmOpen(true)} className="btn-danger">Delete</button>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={handleClose} className="btn-secondary">Close</button>
-                                        <button onClick={() => setIsEditing(true)} className="btn-primary">Update</button>
-                                    </div>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="text-center p-8">
-                                <p className="text-red-500">Failed to load crop details. Please try again.</p>
-                            </div>
-                        )}
-                    </div>
-                )}
+                <div className="space-y-6">
+                    {renderContent()}
+                </div>
                 <style>{`
                     .btn-primary { padding: 0.5rem 1rem; background-color: #22c55e; color: white; border-radius: 0.375rem; border: none; transition: background-color 0.2s; font-weight: 600; }
                     .btn-primary:hover { background-color: #16a34a; }
