@@ -20,6 +20,8 @@ import Dashboard from './pages/Dashboard';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Zones from './pages/Zones';
+import CropGuidePage from './pages/CropGuidePage';
+import CropDetailPage from './pages/CropDetailPage';
 import EquipmentPage from './pages/Equipment';
 import Profile from './pages/Profile';
 import AlertsPage from './pages/Alerts';
@@ -76,6 +78,8 @@ const AuthLayout: React.FC = () => {
             <Route path="/dashboard" element={<Dashboard t={t} />} />
             <Route path="/farms" element={<FarmsPage t={t} />} />
             <Route path="/zones" element={<Zones t={t} />} />
+            <Route path="/crop-guide" element={<CropGuidePage t={t} />} />
+            <Route path="/crop-guide/:cropId" element={<CropDetailPage t={t} />} />
             <Route path="/equipment" element={<EquipmentPage t={t} />} />
             <Route path="/alerts" element={<AlertsPage t={t} />} />
             <Route path="/reports" element={<Reports t={t} />} />

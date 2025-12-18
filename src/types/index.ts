@@ -18,6 +18,8 @@ export enum Page {
   Dashboard = 'Dashboard',
   Farms = 'Farms',
   Zones = 'Zones',
+  CropGuide = 'CropGuide',   
+  CropDetail = 'CropDetail', 
   Equipment = 'Equipment',
   Alerts = 'Alerts',
   Reports = 'Reports',
@@ -65,38 +67,39 @@ export interface ReadingType {
 
 export interface CropStageRequirement {
   id: string;
-  readingTypeCode: string; 
-  readingTypeName: string; 
+  readingtypecode: string; 
+  readingtypename: string; 
   unit: string;
-  minValue: number; 
-  maxValue: number; 
-  optimalMin: number; 
-  optimalMax: number; 
+  minvalue: number; 
+  maxvalue: number; 
+  optimalmin: number; 
+  optimalmax: number; 
 }
 
 export interface CropGrowthStage {
   id: string;
   stagename: string; 
   order: number;
-  durationDays: number; 
+  durationdays: number; 
   description: string;
   requirements: CropStageRequirement[]; 
 }
 
 export interface CropSeason {
   id: string;
-  seasonName: string; 
-  plantingStartMonth: number; 
-  expectedRangeDays: string; 
-  stages: CropGrowthStage[];
+  seasonname: string; 
+  plantingstartmonth: number; 
+  expectedrangedays: string; 
 }
 
 export interface Crop {
   id: string;
   name: string;
-  growthStages?: CropGrowthStage[]; 
+  growthstages?: CropGrowthStage[]; 
   seasons?: CropSeason[];
   stages: CropGrowthStage[];
+  description?: string;     
+  soilTypes?: string[];   
   // Optional fields for UI helpers
   optimalTemp?: { min: number, max: number };
   optimalHum?: { min: number, max: number };

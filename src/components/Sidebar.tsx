@@ -26,6 +26,11 @@ const icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
+  cropGuide: (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+  ),
   equipment: (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0h6" />
@@ -43,7 +48,7 @@ const icons = {
   ),
   settings: (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924-1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   ),
@@ -71,6 +76,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, t, unacknowledgedAlertsCoun
     { to: '/dashboard', icon: icons.dashboard, label: t('sidebar.dashboard') },
     { to: '/farms', icon: icons.farms, label: 'Farms' },
     { to: '/zones', icon: icons.zones, label: t('sidebar.zones') },
+    { to: '/crop-guide', icon: icons.cropGuide, label: 'Crop Guide' },
     { to: '/equipment', icon: icons.equipment, label: t('sidebar.equipment') },
     { to: '/alerts', icon: icons.alerts, label: t('sidebar.alerts'), badge: unacknowledgedAlertsCount },
     { to: '/reports', icon: icons.reports, label: t('sidebar.reports') },
@@ -104,13 +110,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, t, unacknowledgedAlertsCoun
 
   return (
     <aside className="w-20 md:w-64 bg-card-light dark:bg-card-dark flex flex-col border-e border-border-light dark:border-border-dark transition-all duration-300">
-      {/* Logo */}
       <div className="flex items-center justify-start h-20 border-b border-border-light dark:border-border-dark">
         <img src="/SmartAgri_Logo.png" alt="SAMS Logo" className="h-25 w-25 object-contain mb-5" />
         <h1 className="hidden md:block text-3xl font-bold text-primary leading-tight -ml-1">SmartAgri</h1>
       </div>
 
-      {/* Main Navigation */}
       <nav className="flex-1 px-2 md:px-4 py-4 space-y-2">
         <p className="hidden md:block px-4 text-xs font-semibold text-text-light-secondary dark:text-dark-secondary uppercase tracking-wider">
           {t('sidebar.mainMenu')}
@@ -123,7 +127,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, t, unacknowledgedAlertsCoun
         {settingsNav.map(renderNavLink)}
       </nav>
 
-      {/* Profile & Logout */}
       <div className="px-2 md:px-4 py-4 mt-auto border-t border-border-light dark:border-border-dark">
         <NavLink
           to="/profile"

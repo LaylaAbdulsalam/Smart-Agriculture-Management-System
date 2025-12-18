@@ -214,12 +214,12 @@ export const getEquipmentByFarm = async (farmId: string): Promise<Equipment[]> =
 
 export const createEquipment = async (data: any): Promise<Equipment> => {
   const payload = {
-    zoneid: String(data.zoneId),            
-    readingtypeid: String(data.readingTypeId), 
-    serialnumber: data.serialNumber,           
-    equipmentmodel: data.model,       
-    installationdate: new Date().toISOString(),
-    isactive: data.status === 'Active'
+    zoneid: String(data.zoneid),            
+    readingtypeid: String(data.readingtypeid), 
+    serialnumber: data.serialnumber,           
+    equipmentmodel: data.equipmentmodel,       
+    isactive: data.isactive,
+    installationdate: data.installationdate,
   };
   const response = await httpClient.post<EquipmentDto>(API_ENDPOINTS.EQUIPMENTS.CREATE, payload);
   return mapEquipment(response);

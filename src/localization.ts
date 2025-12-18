@@ -234,7 +234,58 @@ export const translations = {
     toast: {
       close: 'Close',
     },
+
+     // --- Crop Guide ---
+    cropGuide: {
+      title: 'Crop Guide',
+      description: 'Explore the catalog of crops you can manage in your farm.',
+      loading: 'Loading crops...',
+      noCropsTitle: 'No crops found in the catalog.',
+      noCropsDescription: 'Contact your system administrator to add crops.',
+    },
+    
+    // --- crop details ---
+    cropDetail: {
+      back: 'Back to Crop Guide',
+      loading: 'Loading crop details...',
+      notFound: 'Crop not found.',
+      noDescription: 'No description available for this crop.',
+      growthStages: 'Growth Stages',
+      optimalConditions: 'Optimal Conditions',
+      soilTypes: 'Soil Types',
+      optimalTemp: 'Optimal Temperature',
+      optimalHum: 'Optimal Humidity',
+    },
+
+     stages: {
+      'Vegetative Growth': 'Vegetative Growth',
+      'Reproductive Stage': 'Reproductive Stage',
+      'Maturity & Harvest': 'Maturity & Harvest',
+      // Add any other stage names that might come from the API
+    },
+    seasons: {
+      'Primary Season': 'Primary Season',
+      'Secondary Season': 'Secondary Season',
+       // Add any other season names
+    },
+
+    crops: {
+      'Zucchini': 'Zucchini', 'Yarrow': 'Yarrow', 'Yam': 'Yam', 'Wheat': 'Wheat', 'Watermelon': 'Watermelon',
+      'Watercress': 'Watercress', 'Water Spinach': 'Water Spinach', 'Wasabi': 'Wasabi', 'Walnut': 'Walnut',
+      'Valerian': 'Valerian', 'Turnip': 'Turnip', 'Turmeric': 'Turmeric', 'Tulsi': 'Tulsi', 'Truffle': 'Truffle',
+      'Tomato': 'Tomato', 'Thyme': 'Thyme', 'Teff': 'Teff', 'Tea': 'Tea', 'Taro': 'Taro', 'Tangerine': 'Tangerine',
+      'Tamarind': 'Tamarind', 'Sweet Potato': 'Sweet Potato', 'Sunflower': 'Sunflower', 'Strawberry': 'Strawberry',
+      'Stevia': 'Stevia', 'Starfruit': 'Starfruit', 'Squash': 'Squash', 'Spinach': 'Spinach', 'Soybean': 'Soybean',
+      'Soursop': 'Soursop', 'Sorghum': 'Sorghum', 'Shiitake': 'Shiitake', 'Shallot': 'Shallot', 'Sesame': 'Sesame',
+      'Seaweed': 'Seaweed', 'Sea Buckthorn': 'Sea Buckthorn', 'Sapodilla': 'Sapodilla', 'Salsify Root': 'Salsify Root',
+      'Salsify': 'Salsify', 'Sage': 'Sage', 'Rye': 'Rye', 'Rosemary': 'Rosemary', 'Romanesco': 'Romanesco',
+      'Romaine Lettuce': 'Romaine Lettuce', 'Rice': 'Rice', 'Reishi': 'Reishi', 'Raspberry': 'Raspberry',
+      'Rambutan': 'Rambutan', 'Radish': 'Radish',
+    },
+    
   },
+
+
   ar: {
     // General
     on: 'تشغيل',
@@ -390,7 +441,7 @@ export const translations = {
     },
     // Auth Pages
     login: {
-        title: 'تسجيل الدخول إلى سامز',
+        title: 'تسجيل الدخول إلى SmartAgri',
         description: 'أدخل بياناتك للوصول إلى لوحة تحكم المزرعة.',
         email: 'البريد الإلكتروني',
         password: 'كلمة المرور',
@@ -401,7 +452,7 @@ export const translations = {
         createAccount: 'إنشاء حساب جديد',
     },
     signup: {
-        title: 'أنشئ حسابك في سامز',
+        title: 'أنشئ حسابك في SmartAgri',
         choosePhoto: 'اختر صورة الملف الشخصي',
         name: 'الاسم',
         email: 'البريد الإلكتروني',
@@ -462,10 +513,57 @@ export const translations = {
       p3: 'نحتفظ بالمعلومات التي تم جمعها فقط طالما كان ذلك ضروريًا لتزويدك بالخدمة المطلوبة. البيانات التي نخزنها، نحميها ضمن وسائل مقبولة تجاريًا لمنع الفقدان والسرقة، وكذلك الوصول غير المصرح به أو الكشف أو النسخ أو الاستخدام أو التعديل.',
       p4: 'نحن لا نشارك أي معلومات تعريف شخصية علنًا أو مع أطراف ثالثة، إلا عندما يقتضي القانون ذلك.',
     },
-    // Toast
+    // Toastf
     toast: {
       close: 'إغلاق',
     },
+
+    // --- Crop Guide ---
+    cropGuide: {
+      title: 'دليل المحاصيل',
+      description: 'استكشف قائمة المحاصيل التي يمكنك إدارتها في مزرعتك.',
+      loading: 'جارٍ تحميل المحاصيل...',
+      noCropsTitle: 'لم يتم العثور على محاصيل في القائمة.',
+      noCropsDescription: 'تواصل مع مسؤول النظام لإضافة المحاصيل.',
+    },
+
+    // --- crop details ---
+    cropDetail: {
+      back: 'العودة إلى دليل المحاصيل',
+      loading: 'جارٍ تحميل تفاصيل المحصول...',
+      notFound: 'المحصول غير موجود.',
+      noDescription: 'لا يوجد وصف متاح لهذا المحصول.',
+      growthStages: 'مراحل النمو',
+      optimalConditions: 'الظروف المثلى',
+      soilTypes: 'أنواع التربة',
+      optimalTemp: 'درجة الحرارة المثلى',
+      optimalHum: 'الرطوبة المثلى',
+    },
+
+    stages: {
+      'Vegetative Growth': 'النمو الخضري',
+      'Reproductive Stage': 'مرحلة التكاثر',
+      'Maturity & Harvest': 'النضج والحصاد',
+    },
+    seasons: {
+      'Primary Season': 'الموسم الأساسي',
+      'Secondary Season': 'الموسم الثانوي',
+    },
+
+    crops: {
+      'Zucchini': 'كوسة', 'Yarrow': 'قيصوم', 'Yam': 'يام', 'Wheat': 'قمح', 'Watermelon': 'بطيخ',
+      'Watercress': 'جرجير الماء', 'Water Spinach': 'سبانخ الماء', 'Wasabi': 'وسابي', 'Walnut': 'جوز',
+      'Valerian': 'ناردين', 'Turnip': 'لفت', 'Turmeric': 'كركم', 'Tulsi': 'ريحان مقدس', 'Truffle': 'كمأة',
+      'Tomato': 'طماطم', 'Thyme': 'زعتر', 'Teff': 'تف', 'Tea': 'شاي', 'Taro': 'قلقاس', 'Tangerine': 'يوسفي',
+      'Tamarind': 'تمر هندي', 'Sweet Potato': 'بطاطا حلوة', 'Sunflower': 'عباد الشمس', 'Strawberry': 'فراولة',
+      'Stevia': 'ستيفيا', 'Starfruit': 'فاكهة النجمة', 'Squash': 'قرع', 'Spinach': 'سبانخ', 'Soybean': 'فول الصويا',
+      'Soursop': 'قشطة شائكة', 'Sorghum': 'ذرة رفيعة', 'Shiitake': 'فطر شيتاكي', 'Shallot': 'كراث أندلسي', 'Sesame': 'سمسم',
+      'Seaweed': 'أعشاب بحرية', 'Sea Buckthorn': 'هبق البحر', 'Sapodilla': 'سبوتة', 'Salsify Root': 'جذر السالسيفي',
+      'Salsify': 'سالسيفي', 'Sage': 'مريمية', 'Rye': 'شيلم', 'Rosemary': 'إكليل الجبل', 'Romanesco': 'بروكلي رومانسكي',
+      'Romaine Lettuce': 'خس روماني', 'Rice': 'أرز', 'Reishi': 'فطر ريشي', 'Raspberry': 'توت العليق',
+      'Rambutan': 'رامبوتان', 'Radish': 'فجل',
+    },
+
   },
 };
 

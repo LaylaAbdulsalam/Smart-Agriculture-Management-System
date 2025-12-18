@@ -67,7 +67,7 @@ const ActiveCropCard: React.FC<{
         title: 'Active Crops (Farm-Wide)',
         content: uniqueCrops,
         isList: true,
-        subtext: `${uniqueCrops.length} different crop(s) active.`
+        subtext: `${uniqueCrops.length} different crops active`
       };
     }
 

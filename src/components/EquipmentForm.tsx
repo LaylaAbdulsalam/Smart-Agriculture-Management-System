@@ -15,11 +15,11 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({ equipment, zones, reading
   const getInitialState = () => {
     if (equipment) {
       return {
-        zoneid: equipment.zoneid,
-        serialnumber: equipment.serialnumber,
-        equipmentmodel: equipment.equipmentmodel,
-        readingtypeid: equipment.readingtypeid,
-        status: equipment.isactive ? EquipmentStatus.Active : EquipmentStatus.Inactive,
+        zoneid: equipment.zoneId,
+        serialnumber: equipment.serialNumber,
+        equipmentmodel: equipment.model,
+        readingtypeid: equipment.readingTypeId,
+        status: equipment.status ? EquipmentStatus.Active : EquipmentStatus.Inactive,
       };
     } else {
       return {
@@ -76,7 +76,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({ equipment, zones, reading
       <div>
         <label className="block text-sm font-medium mb-1">Reading Type</label>
         <select name="readingtypeid" value={formData.readingtypeid} onChange={handleChange} required className="w-full px-3 py-2 bg-background-light dark:bg-slate-700 border border-border-light dark:border-border-dark rounded-md">
-            {readingTypes.map(rt => <option key={rt.id} value={rt.id}>{rt.displayname}</option>)}
+            {readingTypes.map(rt => <option key={rt.id} value={rt.id}>{rt.displayName}</option>)}
         </select>
       </div>
       
