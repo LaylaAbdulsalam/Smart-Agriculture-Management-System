@@ -20,7 +20,6 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
             seasonId: '',
             currentStageId: zoneCrop?.currentStageId?.toString() || '',
             plantedAt: zoneCrop?.plantedAt ? zoneCrop.plantedAt.split('T')[0] : new Date().toISOString().split('T')[0],
-            expectedHarvestAt: zoneCrop?.expectedHarvestAt ? zoneCrop.expectedHarvestAt.split('T')[0] : '',
         };
     });
     
@@ -31,20 +30,19 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
         const fetchDetailsAndUpdateForm = async () => {
             if (formData.cropId) {
                 setIsLoadingDetails(true);
-                setDetailedCrop(null); 
                 try {
                     const details = await api.getCropDetails(String(formData.cropId));
                     setDetailedCrop(details);
 
                     const seasons = details?.seasons || [];
-                    const stages = (details?.growthStages || []).sort((a: any, b: any) => a.order - b.order);
+                    const stages = (details?.growthstages || details?.growthstages || []).sort((a: any, b: any) => a.order - b.order);
 
                     if (!zoneCrop || formData.cropId !== zoneCrop.cropId) {
-                        setFormData(prev => ({
-                            ...prev,
-                            seasonId: seasons.length > 0 ? String(seasons[0].id) : '',
-                            currentStageId: stages.length > 0 ? String(stages[0].id) : '',
-                        }));
+                      setFormData(prev => ({
+                          ...prev,
+                          seasonId: seasons.length > 0 ? String(seasons[0].id) : '',
+                          currentStageId: stages.length > 0 ? String(stages[0].id) : '',
+                      }));
                     }
                 } catch (error) {
                     console.error("Could not fetch crop details:", error);
@@ -57,7 +55,7 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
     }, [formData.cropId, zoneCrop]);
 
     const seasons = useMemo(() => detailedCrop?.seasons || [], [detailedCrop]);
-    const stages = useMemo(() => (detailedCrop?.growthStages || []).sort((a: any, b: any) => a.order - b.order), [detailedCrop]);
+    const stages = useMemo(() => (detailedCrop?.growthstages || detailedCrop?.growthstages || []).sort((a: any, b: any) => a.order - b.order), [detailedCrop]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -68,18 +66,17 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
         e.preventDefault();
         
         let submissionData;
-
-        if (zoneCrop) {
+        if (zoneCrop) { // This is an UPDATE
             submissionData = {
                 cropgrowthstageid: formData.currentStageId,
+                isactive: true, // THIS IS THE FIX: Always keep the crop active on update.
             };
-        } else {
+        } else { // This is a NEW crop
             submissionData = {
                 zoneid: zone.id,
                 cropid: formData.cropId,
                 cropgrowthstageid: formData.currentStageId,
                 plantingdate: new Date(formData.plantedAt).toISOString().split('T')[0],
-                expectedharvestat: formData.expectedHarvestAt ? new Date(formData.expectedHarvestAt).toISOString().split('T')[0] : null,
                 isactive: true,
             };
         }
@@ -112,15 +109,9 @@ const ZoneCropForm: React.FC<ZoneCropFormProps> = ({ zone, zoneCrop, crops, onSa
                       stages.map((s: any) => <option key={s.id} value={s.id}>{s.stagename || s.name}</option>)}
                 </select>
             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium mb-1">Planted At</label>
-                    <input type="date" name="plantedAt" value={formData.plantedAt} onChange={handleChange} required className="w-full input" />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">Expected Harvest</label>
-                    <input type="date" name="expectedHarvestAt" value={formData.expectedHarvestAt} onChange={handleChange} className="w-full input" />
-                </div>
+            <div>
+                <label className="block text-sm font-medium mb-1">Planted At</label>
+                <input type="date" name="plantedAt" value={formData.plantedAt} onChange={handleChange} required className="w-full input" disabled={!!zoneCrop} />
             </div>
             
             <div className="flex justify-end gap-4 pt-4 border-t border-border-light dark:border-border-dark mt-6">

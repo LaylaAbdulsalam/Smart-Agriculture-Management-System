@@ -106,7 +106,9 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className="h-20 shrink-0 flex items-center justify-between px-4 md:px-6 lg:px-8 bg-card-light dark:bg-card-dark border-b border-border-light dark:border-border-dark">
       <div className="flex items-center gap-4">
+         <div className="hidden">
         <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+        </div>
         <h1 className="text-xl md:text-2xl font-semibold text-black dark:text-white">{pageTitles[location.pathname]}</h1>
 
         {/* Farm Dropdown */}

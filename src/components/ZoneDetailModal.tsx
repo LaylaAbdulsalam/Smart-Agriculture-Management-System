@@ -1,12 +1,76 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useMemo } from 'react';
-import { Zone, ZoneCrop, Crop, ReadingType, TFunction } from '../types';
+import { Zone, ZoneCrop, Crop, ReadingType, TFunction, CropGrowthStage } from '../types';
 import Modal from './Modal';
-import GrowthStageWidget from './GrowthStageWidget';
 import ZoneCropForm from './ZoneCropForm';
 import DeleteConfirmation from './DeleteConfirmation';
 import * as api from '../services/apiService';
 import { useFarm } from '../contexts/FarmContext';
+
+const GrowthStageWidget: React.FC<{
+    zoneCrop: ZoneCrop;
+    crop: Crop;
+    stage: CropGrowthStage;
+    t: TFunction;
+    daysSincePlanting: number;
+}> = ({ zoneCrop, crop, stage, t, daysSincePlanting }) => {
+    
+    const stageDuration = stage.durationdays || 1; 
+    const progressPercentage = Math.min((daysSincePlanting / stageDuration) * 100, 100);
+
+    const stageTimeline = useMemo(() => {
+        if (!crop.growthstages || crop.growthstages.length === 0) {
+            return [];
+        }
+        
+        const sortedStages = [...crop.growthstages].sort((a, b) => a.order - b.order);
+        const currentDate = new Date(zoneCrop.plantedAt);
+        
+        return sortedStages.map(s => {
+            const startDate = new Date(currentDate);
+            const endDate = new Date(currentDate.setDate(currentDate.getDate() + (s.durationdays || 0)));
+            const isCurrent = s.id === stage.id;
+            
+            return {
+                id: s.id,
+                name: s.stagename,
+                startDate: startDate.toLocaleDateString(),
+                endDate: endDate.toLocaleDateString(),
+                isCurrent: isCurrent,
+            };
+        });
+    }, [crop, zoneCrop.plantedAt, stage.id]);
+
+    return (
+        <div className="space-y-4">
+            <div>
+                <h3 className="text-2xl font-bold text-black dark:text-white">{zoneCrop.cropName} - {t(`stages.${stage.stagename}`, { defaultValue: stage.stagename })}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    Day {daysSincePlanting} of approximately {stageDuration} days in this stage.
+                </p>
+            </div>
+
+            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+                <div 
+                    className="bg-primary h-2.5 rounded-full transition-all duration-500" 
+                    style={{ width: `${progressPercentage}%` }}
+                ></div>
+            </div>
+            
+            <div>
+                <h4 className="font-semibold text-black dark:text-white mb-2">Full Growth Timeline</h4>
+                <div className="max-h-48 overflow-y-auto pr-2 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border border-border-light dark:border-border-dark scrollbar-thin scrollbar-thumb-slate-400 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent scrollbar-thumb-rounded-full">
+                    {stageTimeline.map(timelineStage => (
+                        <div key={timelineStage.id} className={`flex justify-between items-center p-2 rounded ${timelineStage.isCurrent ? 'bg-primary/10' : ''}`}>
+                            <span className={`font-medium text-sm ${timelineStage.isCurrent ? 'text-primary font-bold' : 'text-slate-600 dark:text-slate-300'}`}>{timelineStage.name}</span>
+                            <span className={`text-xs font-mono ${timelineStage.isCurrent ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>{timelineStage.startDate} &rarr; {timelineStage.endDate}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 interface ZoneDetailModalProps {
   isOpen: boolean;
@@ -29,27 +93,22 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
     const [detailedCrop, setDetailedCrop] = useState<Crop | null>(null);
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
     
-    const safeZoneCrops = zoneCrops || [];
-    const safeCrops = crops || [];
-    const safeReadingTypes = readingTypes || [];
+    const safeZoneCrops = useMemo(() => zoneCrops || [], [zoneCrops]);
+    const safeCrops = useMemo(() => crops || [], [crops]);
+    const safeReadingTypes = useMemo(() => readingTypes || [], [readingTypes]);
 
     const activeZoneCrop = useMemo(() => safeZoneCrops.find(zc => zc.zoneId === zone.id && zc.isActive), [safeZoneCrops, zone.id]);
     
-    // --- THIS IS THE ONLY CHANGE ---
-    // This effect now correctly sets the initial view state only when the modal opens.
     useEffect(() => {
         if (isOpen) {
-            // If there is no active crop, we are in "editing" mode (to show the Plant Crop form).
-            // If there is an active crop, we are NOT in "editing" mode (to show the details).
             setIsEditing(!activeZoneCrop);
         }
-    }, [isOpen]); // It only runs when `isOpen` changes.
+    }, [isOpen, activeZoneCrop]);
     
     useEffect(() => {
         const fetchDetails = async () => {
-            if (activeZoneCrop) {
+            if (activeZoneCrop?.cropId) {
                 setIsLoadingDetails(true);
-                setDetailedCrop(null);
                 try {
                     const details = await api.getCropDetails(activeZoneCrop.cropId);
                     setDetailedCrop(details);
@@ -73,6 +132,12 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
         return api.findStage(detailedCrop, activeZoneCrop.currentStageId);
     }, [detailedCrop, activeZoneCrop]);
 
+    const daysSincePlanting = useMemo(() => {
+        if (!activeZoneCrop) return 0;
+        // eslint-disable-next-line react-hooks/purity
+        return Math.max(0, Math.floor((Date.now() - new Date(activeZoneCrop.plantedAt).getTime()) / (1000 * 60 * 60 * 24)));
+    }, [activeZoneCrop]);
+
     const handleSave = async (data: any) => {
         try {
             if (activeZoneCrop) {
@@ -80,7 +145,6 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
             } else {
                 await onAssignCrop({ ...data, zoneId: zone.id });
             }
-            // After saving, always try to go back to the details view or close
             setIsEditing(false);
             onClose(); 
         } catch (error) {
@@ -130,7 +194,7 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
             return (
                 <ZoneCropForm
                     zone={zone}
-                    zoneCrop={activeZoneCrop} // Pass activeZoneCrop for editing case
+                    zoneCrop={activeZoneCrop}
                     crops={safeCrops}
                     onSave={handleSave}
                     onClose={() => {
@@ -157,10 +221,10 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
                         zoneCrop={activeZoneCrop}
                         crop={detailedCrop}
                         stage={activeStage}
-                        readingTypes={safeReadingTypes}
                         t={t}
+                        daysSincePlanting={daysSincePlanting}
                     />
-                    <div className="flex justify-between items-center pt-4 border-t border-border-light dark:border-border-dark">
+                    <div className="flex justify-between items-center pt-4 mt-4 border-t border-border-light dark:border-border-dark">
                         <div className="flex gap-2">
                             <button onClick={() => setIsDeactivateConfirmOpen(true)} className="btn-secondary">Deactivate & Plant New</button>
                             <button onClick={() => setIsDeleteConfirmOpen(true)} className="btn-danger">Delete</button>
@@ -176,7 +240,7 @@ const ZoneDetailModal: React.FC<ZoneDetailModalProps> = ({ isOpen, onClose, zone
 
         return (
             <div className="text-center p-8">
-                <p className="text-red-500">Failed to load crop details. Please try again.</p>
+                <p className="text-red-500">Failed to load crop details. Please check the API or try again.</p>
             </div>
         );
     };

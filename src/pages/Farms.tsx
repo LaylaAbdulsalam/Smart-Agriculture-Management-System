@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TFunction } from '../types';
 import { useFarm } from '../contexts/FarmContext';
 import Modal from '../components/Modal';
@@ -11,7 +12,9 @@ interface FarmsPageProps {
 }
 
 const FarmsPage: React.FC<FarmsPageProps> = ({ t }) => {
-  const { farms, addFarm, updateFarm, deleteFarm } = useFarm();
+  const { farms, addFarm, updateFarm, deleteFarm, setSelectedFarmId } = useFarm();
+  const navigate = useNavigate();
+  
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<any>(null);
@@ -54,13 +57,18 @@ const FarmsPage: React.FC<FarmsPageProps> = ({ t }) => {
       }
     }
   };
+  
+  const handleViewZones = (farmId: string) => {
+    // 1. Update the global selected farm ID
+    setSelectedFarmId(farmId);
+    // 2. Navigate the user to the zones page
+    navigate('/zones');
+  };
 
   return (
     <>
       <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} 
              title={selectedFarm ? "Edit Farm" : "Create New Farm"}>
-        {/* We add a `key` here. When `selectedFarm` changes, React will destroy the old
-            FarmForm and create a new one, ensuring the state is always fresh. */}
         <FarmForm key={selectedFarm?.id || 'new'} farm={selectedFarm} onSave={handleSaveFarm} onClose={() => setIsFormModalOpen(false)} />
       </Modal>
       
@@ -112,19 +120,27 @@ const FarmsPage: React.FC<FarmsPageProps> = ({ t }) => {
                     </p>
                   </div>
                 </div>
-                <div className="flex justify-end gap-2 mt-4">
-                  <button 
-                    onClick={() => handleOpenEditModal(farm)} 
-                    className="px-3 py-1 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700"
+                <div className="flex justify-between items-center gap-2 mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+                  <button
+                    onClick={() => handleViewZones(farm.id)}
+                    className="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-primary-focus transition-colors text-sm"
                   >
-                    Edit
+                    View Zones
                   </button>
-                  <button 
-                    onClick={() => handleOpenDeleteModal(farm)} 
-                    className="px-3 py-1 text-sm font-medium text-red-500 rounded-lg hover:bg-red-500/10"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleOpenEditModal(farm)} 
+                      className="px-3 py-1 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700"
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => handleOpenDeleteModal(farm)} 
+                      className="px-3 py-1 text-sm font-medium text-red-500 rounded-lg hover:bg-red-500/10"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

@@ -17,7 +17,6 @@ export interface RegisterRequest { FullName: string; email: string; password: st
 export interface OtpVerificationRequest { email: string; otp: string; }
 export interface AuthResponse { auth: { token: string }; user: User; }
 
-
 // --- Mappers ---
 const mapFarm = (dto: FarmDto): Farm | null => {
   if (!dto.id) { return null; }
@@ -154,7 +153,6 @@ export const updateFarm = async (id: string, farmData: any): Promise<Farm> => {
     lat: farmData.location.lat,
     lon: farmData.location.lon,
   };
-
   const response = await httpClient.put<FarmDto>(`${API_ENDPOINTS.FARMS.UPDATE}?id=${id}`, payload);
   const mappedFarm = mapFarm(response);
   if (!mappedFarm) throw new Error("Update farm failed: Invalid data from server");
@@ -218,8 +216,8 @@ export const createEquipment = async (data: any): Promise<Equipment> => {
     readingtypeid: String(data.readingtypeid), 
     serialnumber: data.serialnumber,           
     equipmentmodel: data.equipmentmodel,       
-    isactive: data.isactive,
-    installationdate: data.installationdate,
+    isactive: data.status === EquipmentStatus.Active,
+    installationdate: new Date().toISOString(),
   };
   const response = await httpClient.post<EquipmentDto>(API_ENDPOINTS.EQUIPMENTS.CREATE, payload);
   return mapEquipment(response);
@@ -227,8 +225,8 @@ export const createEquipment = async (data: any): Promise<Equipment> => {
 
 export const updateEquipment = async (id: string, data: any): Promise<Equipment> => {
   const payload = {
-      readingtypeid: String(data.readingTypeId),
-      isactive: data.status === EquipmentStatus.Active
+      readingtypeid: String(data.readingtypeid),
+      isactive: data.status === EquipmentStatus.Active,
   };
   const response = await httpClient.put<EquipmentDto>(`${API_ENDPOINTS.EQUIPMENTS.UPDATE}?id=${id}`, payload);
   return mapEquipment(response);
@@ -326,7 +324,6 @@ export const assignCropToZone = async (data: any): Promise<any> => {
         cropid: data.cropid,
         cropgrowthstageid: data.cropgrowthstageid,
         plantingdate: data.plantingdate,
-        expectedharvestat: data.expectedharvestat,
         isactive: data.isactive,
     };
     return httpClient.post(API_ENDPOINTS.ZONE_CROPS.CREATE, payload);
@@ -335,20 +332,18 @@ export const assignCropToZone = async (data: any): Promise<any> => {
 export const updateZoneCrop = async (id: string, updates: any): Promise<ZoneCrop> => {
     const payload = { 
         cropgrowthstageid: updates.cropgrowthstageid, 
-        isactive: updates.isactive,
-        actualharvestat: updates.actualHarvestAt
     };
     const response = await httpClient.put<any>(`${API_ENDPOINTS.ZONE_CROPS.UPDATE}?id=${id}`, payload);
+    
     return {
         id: response.id,
         zoneId: response.zoneid,
         cropId: response.cropid,
         isActive: response.isactive,
         plantedAt: response.plantingdate,
-        expectedHarvestAt: response.expectedharvestat,
         currentStageId: response.cropgrowthstageid,
         cropName: response.cropname,
-        stageName: response.stagename
+        stageName: response.stagename,
     };
 };
 
@@ -390,16 +385,19 @@ export const getReadingTypes = async (): Promise<ReadingType[]> => {
 };
 
 // --- Mock Reports & Analytics ---
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const getReportsByFarm = async (farmId: string): Promise<any[]> => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _farmId = farmId;
     await new Promise(resolve => setTimeout(resolve, 800));
     return [
         { id: 'RPT-001', date: new Date(Date.now() - 86400000 * 1).toISOString(), type: 'Daily Water Usage', author: 'System AI' },
         { id: 'RPT-002', date: new Date(Date.now() - 86400000 * 2).toISOString(), type: 'Soil Health Analysis', author: 'Dr. Ahmed (Consultant)' },
     ];
 };
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 export const generateReport = async (farmId: string): Promise<any> => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _farmId = farmId;
     await new Promise(resolve => setTimeout(resolve, 1000));
     return { 
         id: `RPT-${Math.floor(Math.random() * 1000)}`, 
@@ -410,17 +408,18 @@ export const generateReport = async (farmId: string): Promise<any> => {
 };
 
 // --- Helper Functions ---
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function findCrop(cropId: string): Crop | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _cropId = cropId;
   return undefined;
 }
 
 export function findStage(crop: Crop | undefined, stageId: string | number): CropGrowthStage | null {
-  if (!crop || !crop.growthStages) {
+  if (!crop || !crop.growthstages) {
     return null;
   }
   const stageIdAsString = stageId.toString();
-  const stage = crop.growthStages.find(s => s.id === stageIdAsString);
+  const stage = crop.growthstages.find(s => s.id === stageIdAsString);
   return stage || null;
 }
 
@@ -428,7 +427,3 @@ export function findRequirements(stage: any, readingTypeId: number) {
   if (!stage || !stage.requirements) return null;
   return stage.requirements.find((r: any) => r.readingTypeId === readingTypeId) || null;
 }
-
-
-
-
